@@ -284,7 +284,7 @@ void __stdcall Shellcode(MANUAL_MAPPING_DATA* pData) {
 			ULONG_PTR* pThunkRef = reinterpret_cast<ULONG_PTR*>(pBase + pImportDescr->OriginalFirstThunk);
 			ULONG_PTR* pFuncRef = reinterpret_cast<ULONG_PTR*>(pBase + pImportDescr->FirstThunk);
 
-			if (!((ULONG64)pThunkRef - (ULONG64)pBase))
+			if (!pImportDescr->OriginalFirstThunk)
 				pThunkRef = pFuncRef;
 
 			for (; *pThunkRef; ++pThunkRef, ++pFuncRef) {
