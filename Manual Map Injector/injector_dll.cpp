@@ -1,4 +1,8 @@
 #include "injector.h"
+#include <memory>
+
+// Constants
+constexpr SIZE_T MIN_DLL_SIZE = 0x1000;
 
 // DLL export macro for Windows
 #ifdef _WIN32
@@ -96,23 +100,23 @@ DLL_EXPORT int InjectDllFromMemory(
     }
 
     // Validate DLL data
-    if (dllSize < 0x1000) {
+    if (dllSize < MIN_DLL_SIZE) {
         CloseHandle(hProc);
         return -4; // Invalid DLL data
     }
 
-    // Copy DLL data to local buffer
-    BYTE* pSrcData = new BYTE[dllSize];
+    // Copy DLL data to local buffer using smart pointer for automatic cleanup
+    std::unique_ptr<BYTE[]> pSrcData(new (std::nothrow) BYTE[dllSize]);
     if (!pSrcData) {
         CloseHandle(hProc);
         return -4; // Memory allocation failed
     }
-    memcpy(pSrcData, dllData, dllSize);
+    memcpy(pSrcData.get(), dllData, dllSize);
 
     // Perform injection
     bool result = ManualMapDll(
         hProc,
-        pSrcData,
+        pSrcData.get(),
         dllSize,
         clearHeader,
         clearNonNeededSections,
@@ -122,7 +126,6 @@ DLL_EXPORT int InjectDllFromMemory(
         0
     );
 
-    delete[] pSrcData;
     CloseHandle(hProc);
 
     return result ? 0 : -5; // 0 for success, -5 for injection failure

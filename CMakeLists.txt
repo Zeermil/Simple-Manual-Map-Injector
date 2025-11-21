@@ -30,8 +30,7 @@ if(MSVC)
     target_compile_options(ManualMapInjector PRIVATE /GS-)
 endif()
 
-# Link required Windows libraries
-target_link_libraries(ManualMapInjector PRIVATE)
+# Link required Windows libraries (implicit linking for Windows API)
 
 # Add preprocessor definitions
 target_compile_definitions(ManualMapInjector PRIVATE

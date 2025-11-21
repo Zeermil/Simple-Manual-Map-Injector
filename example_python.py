@@ -143,13 +143,18 @@ def main():
         print(f"Error: DLL file '{dll_to_inject}' not found")
         sys.exit(1)
     
-    # Determine the injector DLL path based on system architecture
-    if sys.maxsize > 2**32:
+    # Determine the injector DLL path based on Python architecture
+    # Check pointer size to determine if we're running 32-bit or 64-bit Python
+    pointer_size = ctypes.sizeof(ctypes.c_void_p)
+    if pointer_size == 8:
         # 64-bit Python
         injector_dll = "build/ManualMapInjector-x64.dll"
-    else:
+    elif pointer_size == 4:
         # 32-bit Python
         injector_dll = "build/ManualMapInjector-x86.dll"
+    else:
+        print(f"Error: Unsupported pointer size: {pointer_size}")
+        sys.exit(1)
     
     if not os.path.exists(injector_dll):
         print(f"Error: Injector DLL '{injector_dll}' not found")
