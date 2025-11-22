@@ -154,6 +154,12 @@ class TOKEN_PRIVILEGES(ctypes.Structure):
 # Windows API Function Definitions
 # ============================================================================
 
+# Check platform
+if sys.platform != 'win32':
+    print("ERROR: This script only works on Windows")
+    print("Manual map injection requires Windows-specific APIs")
+    sys.exit(1)
+
 # Load DLLs
 kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
 advapi32 = ctypes.WinDLL('advapi32', use_last_error=True)
