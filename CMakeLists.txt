@@ -59,27 +59,3 @@ target_compile_definitions(ManualMapInjectorCLI PRIVATE
     $<$<CONFIG:Release>:NDEBUG>
     $<$<CONFIG:Debug>:_DEBUG>
 )
-
-# Create universal launcher (architecture-independent, always build as x64)
-# This launcher detects target process architecture and launches the correct injector
-add_executable(UniversalInjector "Manual Map Injector/launcher.cpp")
-
-set_target_properties(UniversalInjector PROPERTIES OUTPUT_NAME "UniversalInjector")
-
-if(MSVC)
-    target_compile_options(UniversalInjector PRIVATE /GS-)
-endif()
-
-target_compile_definitions(UniversalInjector PRIVATE
-    UNICODE
-    _UNICODE
-    $<$<CONFIG:Release>:NDEBUG>
-    $<$<CONFIG:Debug>:_DEBUG>
-)
-
-# Set required execution level for UAC
-if(MSVC)
-    set_target_properties(UniversalInjector PROPERTIES
-        LINK_FLAGS "/MANIFESTUAC:\"level='requireAdministrator' uiAccess='false'\""
-    )
-endif()

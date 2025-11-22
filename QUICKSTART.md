@@ -1,62 +1,29 @@
 # Quick Start Guide
 
-This guide will get you up and running with the Manual Map Injector in 5 minutes.
+This guide will get you up and running with the Manual Map Injector DLL in 5 minutes.
 
-## Step 1: Build Everything (Universal)
+## Step 1: Build the DLL
 
-The easiest way - build both x86 and x64 versions with one command:
+Open Developer Command Prompt for VS 2019 and run:
 
 ```bash
 cd path\to\Simple-Manual-Map-Injector
-build-all.bat
-```
-
-Or using PowerShell:
-```powershell
-.\build-all.ps1
-```
-
-**Output:** All files in the `bin` directory:
-- `ManualMapInjector-x64.dll` & `ManualMapInjector-x86.dll`
-- `Injector-x64.exe` & `Injector-x86.exe`
-- `UniversalInjector.exe` (smart launcher)
-
-### Alternative: Build Single Architecture
-
-For x64 only:
-```bash
-mkdir build-x64 && cd build-x64
+mkdir build && cd build
 cmake .. -G "Visual Studio 16 2019" -A x64
 cmake --build . --config Release
 ```
 
-## Step 2: Using the Universal Injector (Easiest)
+**Output:** `build/Release/ManualMapInjector-x64.dll`
 
-The universal launcher automatically detects if the target process is 32-bit or 64-bit:
-
-```bash
-cd bin
-UniversalInjector.exe mydll.dll notepad.exe
-```
-
-That's it! No need to worry about architectures.
-
-## Step 3: Using with Python
-
-### Auto-detect Python Architecture
+## Step 2: Prepare Your Python Script
 
 Create `inject.py`:
 
 ```python
 import ctypes
-import sys
-
-# Automatically select correct DLL based on Python architecture
-is_64bit = sys.maxsize > 2**32
-dll_name = "bin/ManualMapInjector-x64.dll" if is_64bit else "bin/ManualMapInjector-x86.dll"
 
 # Load injector DLL
-injector = ctypes.CDLL(dll_name)
+injector = ctypes.CDLL("build/Release/ManualMapInjector-x64.dll")
 
 # Read DLL to inject
 with open("target.dll", "rb") as f:
@@ -77,7 +44,7 @@ result = injector.InjectDllFromMemorySimple(b"notepad.exe", dll_array, len(dll_b
 print(f"Result: {result}")  # 0 = success
 ```
 
-### Run It
+## Step 3: Run It
 
 ```bash
 python inject.py

@@ -1,47 +1,18 @@
 
 # Simple Manual Map Injector
 
-- **Universal Build Support** - Single command builds both x86 and x64 versions
-- **Smart Launcher** - Automatically detects target process architecture
-- Supports x86 and x64 (separate binaries for each architecture)
+- Supports x86 and x64 (Compiling depending the targets)
 - Supports x64 exceptions (SEH) (only /EHa and /EHc)
 - Release & Debug
 - Removes PE Header and some sections (Configurable)
 - Configurable DllMain params (default DLL_PROCESS_ATTACH)
 - Add sections protections (Configurable)
 
-## Quick Start - Universal Build
-
-Build both x86 and x64 versions with a single command:
-
-```cmd
-build-all.bat
-```
-
-Or using PowerShell:
-```powershell
-.\build-all.ps1
-```
-
-This creates all executables in the `bin` directory, including the universal launcher.
-
 ## Usage
 
-### Universal Launcher (Recommended)
+### Command Line (EXE)
 
-The universal launcher automatically detects the target process architecture and uses the correct injector:
-
-```cmd
-UniversalInjector.exe mydll.dll notepad.exe
-```
-
-No need to worry about whether notepad.exe is 32-bit or 64-bit - it's automatic!
-
-### Command Line (Architecture-Specific)
-
-For manual architecture selection:
-- `Injector-x64.exe dll_path process_name` - For 64-bit processes
-- `Injector-x86.exe dll_path process_name` - For 32-bit processes
+- Injector_path.exe dll_path [process_name]
 
 ### Python (DLL via ctypes)
 
@@ -82,39 +53,50 @@ See `example_python.py` for a complete working example.
 - Visual Studio 2019 or higher (with C++ Desktop Development workload)
 - Windows SDK
 
-### Universal Build (Recommended)
+### Building the DLL
 
-Build both x86 and x64 versions automatically:
-
-**Using Batch Script:**
-```cmd
-build-all.bat
-```
-
-**Using PowerShell:**
-```powershell
-.\build-all.ps1
-```
-
-**Output:** All files in `bin` directory:
-- `ManualMapInjector-x64.dll` & `ManualMapInjector-x86.dll`
-- `Injector-x64.exe` & `Injector-x86.exe`
-- `UniversalInjector.exe` (smart launcher)
-
-See [BUILD_UNIVERSAL.md](BUILD_UNIVERSAL.md) for detailed instructions.
-
-### Manual Build (Single Architecture)
-
-**For x64 only:**
+1. **Create build directory:**
 ```bash
-mkdir build-x64 && cd build-x64
+mkdir build
+cd build
+```
+
+2. **Configure CMake for x64:**
+```bash
+cmake .. -G "Visual Studio 16 2019" -A x64
+```
+
+Or for x86:
+```bash
+cmake .. -G "Visual Studio 16 2019" -A Win32
+```
+
+3. **Build the project:**
+```bash
+cmake --build . --config Release
+```
+
+Or for Debug:
+```bash
+cmake --build . --config Debug
+```
+
+4. **Output files:**
+   - DLL: `build/Release/ManualMapInjector-x64.dll` (or `ManualMapInjector-x86.dll`)
+   - CLI EXE: `build/Release/Injector-x64.exe` (or `Injector-x86.exe`)
+
+### Quick Build Commands
+
+**For x64 Release:**
+```bash
+mkdir build && cd build
 cmake .. -G "Visual Studio 16 2019" -A x64
 cmake --build . --config Release
 ```
 
-**For x86 only:**
+**For x86 Release:**
 ```bash
-mkdir build-x86 && cd build-x86
+mkdir build && cd build
 cmake .. -G "Visual Studio 16 2019" -A Win32
 cmake --build . --config Release
 ```
