@@ -148,17 +148,38 @@ def main():
     pointer_size = ctypes.sizeof(ctypes.c_void_p)
     if pointer_size == 8:
         # 64-bit Python
-        injector_dll = "build/ManualMapInjector-x64.dll"
+        dll_name = "ManualMapInjector-x64.dll"
     elif pointer_size == 4:
         # 32-bit Python
-        injector_dll = "build/ManualMapInjector-x86.dll"
+        dll_name = "ManualMapInjector-x86.dll"
     else:
         print(f"Error: Unsupported pointer size: {pointer_size}")
         sys.exit(1)
     
-    if not os.path.exists(injector_dll):
-        print(f"Error: Injector DLL '{injector_dll}' not found")
-        print("Please build the DLL first using CMake")
+    # Try to find the DLL in multiple locations (bin directory first, then build directories)
+    search_paths = [
+        f"bin/{dll_name}",
+        f"build/{dll_name}",
+        f"build-x64/Release/{dll_name}",
+        f"build-x86/Release/{dll_name}",
+        dll_name  # Current directory
+    ]
+    
+    injector_dll = None
+    for path in search_paths:
+        if os.path.exists(path):
+            injector_dll = path
+            break
+    
+    if not injector_dll:
+        print(f"Error: Injector DLL '{dll_name}' not found")
+        print("Searched in:")
+        for path in search_paths:
+            print(f"  - {path}")
+        print("\nPlease build the DLL first using one of:")
+        print("  - build-all.bat          (universal build)")
+        print("  - build-all.ps1          (universal build)")
+        print("  - cmake build (see README.md)")
         sys.exit(1)
     
     # Read the DLL to inject into memory
