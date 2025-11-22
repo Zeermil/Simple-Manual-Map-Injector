@@ -65,6 +65,9 @@ IMAGE_SCN_MEM_EXECUTE = 0x20000000
 
 DLL_PROCESS_ATTACH = 1
 
+# PE Header Size
+PE_HEADER_SIZE = 0x1000  # Standard PE header size (4KB)
+
 # Image ordinal flag
 IMAGE_ORDINAL_FLAG32 = 0x80000000
 IMAGE_ORDINAL_FLAG64 = 0x8000000000000000
@@ -270,7 +273,7 @@ class ManualMapInjector:
         Returns:
             Dictionary with parsed PE information, or None on error
         """
-        if len(dll_data) < 0x1000:
+        if len(dll_data) < PE_HEADER_SIZE:
             return None
         
         # Check DOS signature

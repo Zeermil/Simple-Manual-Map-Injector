@@ -14,7 +14,7 @@ Key differences from C++ version:
 4. Slightly different approach to some operations but same end result
 
 Features:
-- Cross-architecture support (x86/x64) detection
+- Architecture compatibility detection (x86/x64 matching required)
 - PE file parsing and validation  
 - Memory allocation in target process
 - Base relocation processing
@@ -23,6 +23,10 @@ Features:
 - Header and section clearing for stealth
 - TLS callback support
 - Comprehensive error handling
+
+Note: This Python implementation requires matching architectures between
+injector and target process. The C++ version supports cross-architecture
+injection (x64 injector -> x86 target) via a helper process.
 
 Usage:
     python injector.py <dll_path> <process_name>
@@ -80,6 +84,9 @@ IMAGE_DOS_SIGNATURE = 0x5A4D  # MZ
 IMAGE_NT_SIGNATURE = 0x00004550  # PE\0\0
 IMAGE_FILE_MACHINE_I386 = 0x014c
 IMAGE_FILE_MACHINE_AMD64 = 0x8664
+
+# PE Header Size
+PE_HEADER_SIZE = 0x1000  # Standard PE header size (4KB)
 
 # Data directories
 IMAGE_DIRECTORY_ENTRY_EXPORT = 0
@@ -386,9 +393,9 @@ class PythonManualMapInjector:
         
         # Both should match
         if target_is_wow64 != current_is_wow64:
-            self.log(f"[-] Architecture mismatch:")
-            self.log(f"    Target: {'32-bit' if target_is_wow64 else '64-bit'}")
-            self.log(f"    Injector: {'32-bit' if current_is_wow64 else '64-bit'}")
+            target_arch = '32-bit' if target_is_wow64 else '64-bit'
+            injector_arch = '32-bit' if current_is_wow64 else '64-bit'
+            self.log(f"[-] Architecture mismatch: Target is {target_arch}, Injector is {injector_arch}")
             return False
         
         return True
@@ -403,7 +410,7 @@ class PythonManualMapInjector:
         Returns:
             Dictionary containing parsed PE information, or None on error
         """
-        if len(dll_data) < 0x1000:
+        if len(dll_data) < PE_HEADER_SIZE:
             self.log("[-] DLL file too small")
             return None
         
