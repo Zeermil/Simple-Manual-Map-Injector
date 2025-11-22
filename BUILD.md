@@ -2,8 +2,6 @@
 
 This document provides detailed instructions for building the Manual Map Injector as a DLL using CMake.
 
-> **⚡ Quick Start:** For building both x86 and x64 versions automatically, see [Universal Build](#universal-build-recommended) below or check [BUILD_UNIVERSAL.md](BUILD_UNIVERSAL.md).
-
 ## Prerequisites
 
 Before building, ensure you have the following installed:
@@ -20,28 +18,7 @@ Before building, ensure you have the following installed:
    - Usually installed with Visual Studio
    - Minimum version: Windows 10 SDK
 
-## Universal Build (Recommended)
-
-The easiest way to build both x86 and x64 versions at once:
-
-**Using Batch Script:**
-```cmd
-build-all.bat
-```
-
-**Using PowerShell:**
-```powershell
-.\build-all.ps1
-```
-
-This will:
-- Automatically build both architectures
-- Create all outputs in the `bin` directory
-- Build the universal launcher that auto-detects target architecture
-
-For more details, see [BUILD_UNIVERSAL.md](BUILD_UNIVERSAL.md).
-
-## Building the DLL (Single Architecture)
+## Building the DLL
 
 ### Option 1: Using Visual Studio Developer Command Prompt (Recommended)
 
