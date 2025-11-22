@@ -82,9 +82,32 @@ Before building, ensure you have the following installed:
 3. Choose your configuration (Release/Debug, x64/Win32)
 4. Build → Build All
 
-## Building Both x86 and x64
+## Building Both x86 and x64 (Recommended for Cross-Architecture Support)
 
-To build both architectures:
+The project now includes build scripts to build both architectures in one step:
+
+### Using the Build Script (Windows)
+
+```cmd
+build_all.bat
+```
+
+This script will:
+1. Build the x64 version (can inject into both 32-bit and 64-bit processes)
+2. Build the x86 version (used as a helper for x64 when targeting 32-bit processes)
+3. Copy all output files to the `build/` directory
+
+Output files in `build/`:
+- `Injector-x64.exe` - 64-bit injector with cross-architecture support
+- `Injector-x86.exe` - 32-bit helper injector
+- `ManualMapInjector-x64.dll` - 64-bit DLL for Python
+- `ManualMapInjector-x86.dll` - 32-bit DLL for Python
+
+**Important:** Keep both `Injector-x64.exe` and `Injector-x86.exe` in the same directory. The x64 injector will automatically use the x86 helper when targeting 32-bit processes.
+
+### Manual Build (Advanced)
+
+To build both architectures manually:
 
 ```cmd
 # Build x64
@@ -100,19 +123,36 @@ cd build-x86
 cmake .. -G "Visual Studio 16 2019" -A Win32
 cmake --build . --config Release
 cd ..
+
+# Copy files to unified build directory
+mkdir build
+copy build-x64\Release\*.dll build\
+copy build-x64\Release\*.exe build\
+copy build-x86\Release\*.dll build\
+copy build-x86\Release\*.exe build\
 ```
 
 ## Output Files
 
 After building, you will have:
 
-### DLL (for Python ctypes)
-- `build/Release/ManualMapInjector-x64.dll` (x64 build)
-- `build/Release/ManualMapInjector-x86.dll` (x86 build)
+### Using build_all.bat (Recommended)
+All files will be in the `build/` directory:
+- `Injector-x64.exe` - **Main 64-bit injector** (supports both 32-bit and 64-bit targets)
+- `Injector-x86.exe` - 32-bit helper (automatically used by x64 injector)
+- `ManualMapInjector-x64.dll` - 64-bit DLL for Python
+- `ManualMapInjector-x86.dll` - 32-bit DLL for Python
 
-### Executable (command-line tool)
-- `build/Release/Injector-x64.exe` (x64 build)
-- `build/Release/Injector-x86.exe` (x86 build)
+### Manual Build
+Files will be in separate directories:
+
+#### DLL (for Python ctypes)
+- `build-x64/Release/ManualMapInjector-x64.dll` (x64 build)
+- `build-x86/Release/ManualMapInjector-x86.dll` (x86 build)
+
+#### Executable (command-line tool)
+- `build-x64/Release/Injector-x64.exe` (x64 build with cross-architecture support)
+- `build-x86/Release/Injector-x86.exe` (x86 build)
 
 ## Verifying the Build
 
@@ -180,6 +220,11 @@ See `example_python.py` for a complete example.
 - Check your Python architecture: `python -c "import sys; print(sys.maxsize > 2**32)"`
   - True = 64-bit
   - False = 32-bit
+
+### "x86 helper injector not found" when using Injector-x64.exe
+- This happens when trying to inject into a 32-bit process
+- Ensure `Injector-x86.exe` is in the same directory as `Injector-x64.exe`
+- Use `build_all.bat` to build both versions automatically
 
 ### Build fails with optimization errors
 - Try building in Debug mode first: `cmake --build . --config Debug`

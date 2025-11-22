@@ -40,7 +40,7 @@ target_compile_definitions(ManualMapInjector PRIVATE
     $<$<CONFIG:Debug>:_DEBUG>
 )
 
-# Create example executable
+# Create example executable with cross-architecture support
 add_executable(ManualMapInjectorCLI "Manual Map Injector/main.cpp" ${SOURCE_FILES} ${HEADER_FILES})
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)

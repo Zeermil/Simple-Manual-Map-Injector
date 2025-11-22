@@ -363,6 +363,8 @@ FodyWeavers.xsd
 
 # CMake
 build/
+build-x64/
+build-x86/
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake

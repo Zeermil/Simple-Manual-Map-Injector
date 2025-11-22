@@ -20,6 +20,70 @@ bool IsCorrectTargetArchitecture(HANDLE hProc) {
 	return (bTarget == bHost);
 }
 
+bool IsTargetProcess32Bit(HANDLE hProc) {
+	BOOL bTarget = FALSE;
+	if (!IsWow64Process(hProc, &bTarget)) {
+		return false;
+	}
+	return bTarget == TRUE;
+}
+
+bool IsCurrentProcess64Bit() {
+#ifdef _WIN64
+	return true;
+#else
+	return false;
+#endif
+}
+
+int LaunchHelperInjector(wchar_t* dllPath, wchar_t* processName) {
+	// Get the directory of the current executable
+	wchar_t exePath[MAX_PATH];
+	GetModuleFileNameW(NULL, exePath, MAX_PATH);
+	
+	// Remove the executable name to get the directory
+	wchar_t* lastSlash = wcsrchr(exePath, L'\\');
+	if (lastSlash) {
+		*(lastSlash + 1) = L'\0';
+	}
+	
+	// Construct path to x86 helper
+	wchar_t helperPath[MAX_PATH];
+	swprintf_s(helperPath, MAX_PATH, L"%sInjector-x86.exe", exePath);
+	
+	// Check if helper exists
+	if (GetFileAttributesW(helperPath) == INVALID_FILE_ATTRIBUTES) {
+		printf("x86 helper injector not found: %ls\n", helperPath);
+		printf("Please ensure Injector-x86.exe is in the same directory as Injector-x64.exe\n");
+		return -10;
+	}
+	
+	// Build command line
+	wchar_t cmdLine[MAX_PATH * 3];
+	swprintf_s(cmdLine, MAX_PATH * 3, L"\"%ls\" \"%ls\" \"%ls\"", helperPath, dllPath, processName);
+	
+	printf("Launching x86 helper injector for 32-bit target process...\n");
+	
+	STARTUPINFOW si = { sizeof(si) };
+	PROCESS_INFORMATION pi;
+	
+	if (!CreateProcessW(NULL, cmdLine, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+		printf("Failed to launch helper injector: 0x%X\n", GetLastError());
+		return -11;
+	}
+	
+	// Wait for helper to complete
+	WaitForSingleObject(pi.hProcess, INFINITE);
+	
+	DWORD exitCode;
+	GetExitCodeProcess(pi.hProcess, &exitCode);
+	
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+	
+	return exitCode;
+}
+
 DWORD GetProcessIdByName(wchar_t* name) {
 	PROCESSENTRY32 entry;
 	entry.dwSize = sizeof(PROCESSENTRY32);
@@ -42,10 +106,13 @@ DWORD GetProcessIdByName(wchar_t* name) {
 int wmain(int argc, wchar_t* argv[], wchar_t* envp[]) {
 
 	wchar_t* dllPath;
+	wchar_t* processName = NULL;
+	wchar_t* allocatedProcessName = NULL;
 	DWORD PID;
 	if (argc == 3) {
 		dllPath = argv[1];
-		PID = GetProcessIdByName(argv[2]);
+		processName = argv[2];
+		PID = GetProcessIdByName(processName);
 	}
 	else if (argc == 2) {
 		dllPath = argv[1];
@@ -54,9 +121,10 @@ int wmain(int argc, wchar_t* argv[], wchar_t* envp[]) {
 		std::getline(std::cin, pname);
 
 		char* vIn = (char*)pname.c_str();
-		wchar_t* vOut = new wchar_t[strlen(vIn) + 1];
-		mbstowcs_s(NULL, vOut, strlen(vIn) + 1, vIn, strlen(vIn));
-		PID = GetProcessIdByName(vOut);
+		allocatedProcessName = new wchar_t[strlen(vIn) + 1];
+		mbstowcs_s(NULL, allocatedProcessName, strlen(vIn) + 1, vIn, strlen(vIn));
+		processName = allocatedProcessName;
+		PID = GetProcessIdByName(processName);
 	}
 	else {
 		printf("Invalid Params\n");
@@ -67,6 +135,7 @@ int wmain(int argc, wchar_t* argv[], wchar_t* envp[]) {
 
 	if (PID == 0) {
 		printf("Process not found\n");
+		if (allocatedProcessName) delete[] allocatedProcessName;
 		system("pause");
 		return -1;
 	}
@@ -89,13 +158,29 @@ int wmain(int argc, wchar_t* argv[], wchar_t* envp[]) {
 	if (!hProc) {
 		DWORD Err = GetLastError();
 		printf("OpenProcess failed: 0x%X\n", Err);
+		if (allocatedProcessName) delete[] allocatedProcessName;
 		system("PAUSE");
 		return -2;
 	}
 
+	// Check if we need to use helper for cross-architecture injection
 	if (!IsCorrectTargetArchitecture(hProc)) {
+		// If we're 64-bit and target is 32-bit, use helper
+		if (IsCurrentProcess64Bit() && IsTargetProcess32Bit(hProc)) {
+			CloseHandle(hProc);
+			printf("Target process is 32-bit, using x86 helper injector...\n");
+			int result = LaunchHelperInjector(dllPath, processName);
+			if (allocatedProcessName) delete[] allocatedProcessName;
+			if (result != 0) {
+				printf("Helper injector failed with code: %d\n", result);
+				system("PAUSE");
+			}
+			return result;
+		}
+		
 		printf("Invalid Process Architecture.\n");
 		CloseHandle(hProc);
+		if (allocatedProcessName) delete[] allocatedProcessName;
 		system("PAUSE");
 		return -3;
 	}
@@ -103,6 +188,7 @@ int wmain(int argc, wchar_t* argv[], wchar_t* envp[]) {
 	if (GetFileAttributes(dllPath) == INVALID_FILE_ATTRIBUTES) {
 		printf("Dll file doesn't exist\n");
 		CloseHandle(hProc);
+		if (allocatedProcessName) delete[] allocatedProcessName;
 		system("PAUSE");
 		return -4;
 	}
@@ -113,6 +199,7 @@ int wmain(int argc, wchar_t* argv[], wchar_t* envp[]) {
 		printf("Opening the file failed: %X\n", (DWORD)File.rdstate());
 		File.close();
 		CloseHandle(hProc);
+		if (allocatedProcessName) delete[] allocatedProcessName;
 		system("PAUSE");
 		return -5;
 	}
@@ -122,6 +209,7 @@ int wmain(int argc, wchar_t* argv[], wchar_t* envp[]) {
 		printf("Filesize invalid.\n");
 		File.close();
 		CloseHandle(hProc);
+		if (allocatedProcessName) delete[] allocatedProcessName;
 		system("PAUSE");
 		return -6;
 	}
@@ -131,6 +219,7 @@ int wmain(int argc, wchar_t* argv[], wchar_t* envp[]) {
 		printf("Can't allocate dll file.\n");
 		File.close();
 		CloseHandle(hProc);
+		if (allocatedProcessName) delete[] allocatedProcessName;
 		system("PAUSE");
 		return -7;
 	}
@@ -143,6 +232,7 @@ int wmain(int argc, wchar_t* argv[], wchar_t* envp[]) {
 	if (!ManualMapDll(hProc, pSrcData, FileSize)) {
 		delete[] pSrcData;
 		CloseHandle(hProc);
+		if (allocatedProcessName) delete[] allocatedProcessName;
 		printf("Error while mapping.\n");
 		system("PAUSE");
 		return -8;
@@ -150,6 +240,7 @@ int wmain(int argc, wchar_t* argv[], wchar_t* envp[]) {
 	delete[] pSrcData;
 
 	CloseHandle(hProc);
+	if (allocatedProcessName) delete[] allocatedProcessName;
 	printf("OK\n");
 	return 0;
 }

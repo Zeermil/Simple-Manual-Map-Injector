@@ -1,7 +1,8 @@
 
 # Simple Manual Map Injector
 
-- Supports x86 and x64 (Compiling depending the targets)
+- **Cross-architecture support**: 64-bit injector can inject into both 32-bit and 64-bit processes
+- Supports x86 and x64
 - Supports x64 exceptions (SEH) (only /EHa and /EHc)
 - Release & Debug
 - Removes PE Header and some sections (Configurable)
@@ -53,12 +54,35 @@ See `example_python.py` for a complete working example.
 - Visual Studio 2019 or higher (with C++ Desktop Development workload)
 - Windows SDK
 
-### Building the DLL
+### Quick Build - All Architectures (Recommended)
+
+To build both x86 and x64 versions in one step, use the build script:
+
+**Windows:**
+```bash
+build_all.bat
+```
+
+**Linux/macOS (using MinGW or WSL):**
+```bash
+./build_all.sh
+```
+
+This will create:
+- `build/Injector-x64.exe` - 64-bit injector (can inject into 32-bit and 64-bit processes)
+- `build/Injector-x86.exe` - 32-bit injector helper (automatically used by x64 injector)
+- `build/ManualMapInjector-x64.dll` - 64-bit DLL for Python
+- `build/ManualMapInjector-x86.dll` - 32-bit DLL for Python
+
+**Important:** Keep both `Injector-x64.exe` and `Injector-x86.exe` in the same directory. The x64 injector automatically uses the x86 helper when targeting 32-bit processes.
+
+### Manual Build - Single Architecture
+
+#### Building x64 version:
 
 1. **Create build directory:**
 ```bash
-mkdir build
-cd build
+mkdir build && cd build
 ```
 
 2. **Configure CMake for x64:**
@@ -66,7 +90,19 @@ cd build
 cmake .. -G "Visual Studio 16 2019" -A x64
 ```
 
-Or for x86:
+3. **Build the project:**
+```bash
+cmake --build . --config Release
+```
+
+#### Building x86 version:
+
+1. **Create build directory:**
+```bash
+mkdir build && cd build
+```
+
+2. **Configure CMake for x86:**
 ```bash
 cmake .. -G "Visual Studio 16 2019" -A Win32
 ```
@@ -76,30 +112,9 @@ cmake .. -G "Visual Studio 16 2019" -A Win32
 cmake --build . --config Release
 ```
 
-Or for Debug:
-```bash
-cmake --build . --config Debug
-```
-
 4. **Output files:**
    - DLL: `build/Release/ManualMapInjector-x64.dll` (or `ManualMapInjector-x86.dll`)
    - CLI EXE: `build/Release/Injector-x64.exe` (or `Injector-x86.exe`)
-
-### Quick Build Commands
-
-**For x64 Release:**
-```bash
-mkdir build && cd build
-cmake .. -G "Visual Studio 16 2019" -A x64
-cmake --build . --config Release
-```
-
-**For x86 Release:**
-```bash
-mkdir build && cd build
-cmake .. -G "Visual Studio 16 2019" -A Win32
-cmake --build . --config Release
-```
 
 ### Using the Built DLL with Python
 
