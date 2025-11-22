@@ -15,7 +15,11 @@
 
 - Injector_path.exe dll_path [process_name]
 
-### Python (DLL via ctypes)
+### Python
+
+#### Option 1: Python + C++ DLL (Recommended)
+
+Uses the compiled C++ DLL via ctypes for full functionality:
 
 ```python
 import ctypes
@@ -45,6 +49,16 @@ print(f"Injection result: {result}")  # 0 = success
 ```
 
 See `example_python.py` for a complete working example.
+
+#### Option 2: Pure Python (Educational)
+
+A pure Python implementation for learning purposes:
+
+```bash
+python injector.py hello-world-x64.dll notepad.exe
+```
+
+**Note:** The pure Python version demonstrates the manual map process but has limitations in shellcode generation. See [PYTHON_IMPLEMENTATION.md](PYTHON_IMPLEMENTATION.md) for details. For production use, use Option 1 above.
 
 ## Building with CMake
 
