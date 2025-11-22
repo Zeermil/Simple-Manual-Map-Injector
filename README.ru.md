@@ -4,11 +4,46 @@
 
 ## Возможности
 
-- Поддержка x86 и x64 архитектур
+- **Универсальная компиляция** - одна команда создаёт версии для x86 и x64
+- **Умный запускатель** - автоматически определяет архитектуру целевого процесса
+- Поддержка x86 и x64 архитектур (отдельные бинарники для каждой)
 - Поддержка x64 исключений (SEH)
 - Инжект DLL из памяти (байтами)
 - Указание имени процесса для инжекта
 - Вызов через Python с помощью ctypes
+
+## Быстрый старт - Универсальная компиляция
+
+Скомпилируйте версии для x86 и x64 одной командой:
+
+```cmd
+build-all.bat
+```
+
+Или через PowerShell:
+```powershell
+.\build-all.ps1
+```
+
+Это создаст все исполняемые файлы в папке `bin`, включая универсальный запускатель.
+
+## Использование
+
+### Универсальный запускатель (Рекомендуется)
+
+Универсальный запускатель автоматически определяет архитектуру целевого процесса и использует правильный инжектор:
+
+```cmd
+UniversalInjector.exe mydll.dll notepad.exe
+```
+
+Не нужно беспокоиться, 32-битный или 64-битный notepad.exe - всё автоматически!
+
+### Командная строка (Выбор архитектуры вручную)
+
+Для ручного выбора архитектуры:
+- `Injector-x64.exe dll_path process_name` - Для 64-битных процессов
+- `Injector-x86.exe dll_path process_name` - Для 32-битных процессов
 
 ## Компиляция в DLL через CMake
 
@@ -24,49 +59,42 @@
 3. **Windows SDK**
    - Обычно устанавливается вместе с Visual Studio
 
-### Шаги компиляции
+### Универсальная компиляция (Рекомендуется)
 
-1. **Откройте "Developer Command Prompt for VS 2019"**
-   - Пуск → Visual Studio 2019 → Developer Command Prompt
+Скомпилируйте версии для x86 и x64 автоматически:
 
-2. **Перейдите в папку проекта:**
-   ```cmd
-   cd путь\к\Simple-Manual-Map-Injector
-   ```
+**Используя Batch-скрипт:**
+```cmd
+build-all.bat
+```
 
-3. **Создайте папку для сборки:**
-   ```cmd
-   mkdir build
-   cd build
-   ```
+**Используя PowerShell:**
+```powershell
+.\build-all.ps1
+```
 
-4. **Настройте CMake (выберите архитектуру):**
-   
-   **Для x64:**
-   ```cmd
-   cmake .. -G "Visual Studio 16 2019" -A x64
-   ```
-   
-   **Для x86:**
-   ```cmd
-   cmake .. -G "Visual Studio 16 2019" -A Win32
-   ```
+**Результат:** Все файлы в папке `bin`:
+- `ManualMapInjector-x64.dll` и `ManualMapInjector-x86.dll`
+- `Injector-x64.exe` и `Injector-x86.exe`
+- `UniversalInjector.exe` (умный запускатель)
 
-5. **Скомпилируйте проект:**
-   
-   **Release версия (рекомендуется):**
-   ```cmd
-   cmake --build . --config Release
-   ```
-   
-   **Debug версия:**
-   ```cmd
-   cmake --build . --config Debug
-   ```
+Подробные инструкции см. в [BUILD_UNIVERSAL.md](BUILD_UNIVERSAL.md).
 
-6. **Найдите результат в папке `build/Release/`:**
-   - `ManualMapInjector-x64.dll` (или x86 версия) - для использования с Python
-   - `Injector-x64.exe` - консольная утилита
+### Ручная компиляция (Одна архитектура)
+
+**Только для x64:**
+```cmd
+mkdir build-x64 && cd build-x64
+cmake .. -G "Visual Studio 16 2019" -A x64
+cmake --build . --config Release
+```
+
+**Только для x86:**
+```cmd
+mkdir build-x86 && cd build-x86
+cmake .. -G "Visual Studio 16 2019" -A Win32
+cmake --build . --config Release
+```
 
 ## Использование с Python
 
