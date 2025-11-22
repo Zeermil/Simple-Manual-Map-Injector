@@ -97,11 +97,11 @@ REM Copy outputs to bin directory
 echo ================================================
 echo Organizing output files...
 echo ================================================
-mkdir bin
-copy build-x64\Release\*.dll bin\ >nul 2>&1
-copy build-x64\Release\*.exe bin\ >nul 2>&1
-copy build-x86\Release\*.dll bin\ >nul 2>&1
-copy build-x86\Release\*.exe bin\ >nul 2>&1
+mkdir bin 2>nul
+if exist build-x64\Release\*.dll copy build-x64\Release\*.dll bin\ >nul
+if exist build-x64\Release\*.exe copy build-x64\Release\*.exe bin\ >nul
+if exist build-x86\Release\*.dll copy build-x86\Release\*.dll bin\ >nul
+if exist build-x86\Release\*.exe copy build-x86\Release\*.exe bin\ >nul
 echo.
 
 REM List output files

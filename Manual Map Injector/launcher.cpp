@@ -2,9 +2,17 @@
 #include <TlHelp32.h>
 #include <iostream>
 #include <string>
+#include <vector>
 #include <filesystem>
+#include <conio.h>
 
 namespace fs = std::filesystem;
+
+// Safe pause function for Windows
+void SafePause() {
+    std::wcout << L"Press any key to continue..." << std::endl;
+    _getch();
+}
 
 // Get process ID by name
 DWORD GetProcessIdByName(const wchar_t* name) {
@@ -77,12 +85,12 @@ int LaunchInjector(const std::wstring& injectorPath, const std::wstring& dllPath
     PROCESS_INFORMATION pi = { 0 };
     
     // Create command line buffer (CreateProcess may modify it)
-    wchar_t* cmdLine = new wchar_t[commandLine.length() + 1];
-    wcscpy_s(cmdLine, commandLine.length() + 1, commandLine.c_str());
+    std::vector<wchar_t> cmdLine(commandLine.begin(), commandLine.end());
+    cmdLine.push_back(L'\0');
     
     BOOL success = CreateProcessW(
         NULL,           // Application name
-        cmdLine,        // Command line
+        cmdLine.data(), // Command line
         NULL,           // Process security attributes
         NULL,           // Thread security attributes
         FALSE,          // Inherit handles
@@ -92,8 +100,6 @@ int LaunchInjector(const std::wstring& injectorPath, const std::wstring& dllPath
         &si,            // Startup info
         &pi             // Process information
     );
-    
-    delete[] cmdLine;
     
     if (!success) {
         std::wcerr << L"Failed to launch injector: " << GetLastError() << std::endl;
@@ -121,7 +127,7 @@ int wmain(int argc, wchar_t* argv[]) {
     if (argc < 3) {
         std::wcout << L"Usage: " << argv[0] << L" <dll_path> <process_name>" << std::endl;
         std::wcout << L"Example: " << argv[0] << L" mydll.dll notepad.exe" << std::endl;
-        system("pause");
+        SafePause();
         return -1;
     }
 
@@ -131,7 +137,7 @@ int wmain(int argc, wchar_t* argv[]) {
     // Check if DLL exists
     if (!fs::exists(dllPath)) {
         std::wcerr << L"ERROR: DLL file not found: " << dllPath << std::endl;
-        system("pause");
+        SafePause();
         return -2;
     }
 
@@ -141,7 +147,7 @@ int wmain(int argc, wchar_t* argv[]) {
     
     if (processId == 0) {
         std::wcerr << L"ERROR: Process not found: " << processName << std::endl;
-        system("pause");
+        SafePause();
         return -3;
     }
 
@@ -161,7 +167,7 @@ int wmain(int argc, wchar_t* argv[]) {
     if (!fs::exists(injectorPath)) {
         std::wcerr << L"ERROR: Injector not found: " << injectorPath << std::endl;
         std::wcerr << L"Please ensure both Injector-x64.exe and Injector-x86.exe are in the same directory as the launcher." << std::endl;
-        system("pause");
+        SafePause();
         return -4;
     }
 

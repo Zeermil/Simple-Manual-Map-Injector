@@ -108,10 +108,23 @@ Write-Host "Organizing output files..." -ForegroundColor Cyan
 Write-Host "================================================" -ForegroundColor Cyan
 
 New-Item -ItemType Directory -Path "bin" -Force | Out-Null
-Copy-Item -Path "build-x64\Release\*.dll" -Destination "bin\" -ErrorAction SilentlyContinue
-Copy-Item -Path "build-x64\Release\*.exe" -Destination "bin\" -ErrorAction SilentlyContinue
-Copy-Item -Path "build-x86\Release\*.dll" -Destination "bin\" -ErrorAction SilentlyContinue
-Copy-Item -Path "build-x86\Release\*.exe" -Destination "bin\" -ErrorAction SilentlyContinue
+
+# Copy x64 outputs
+if (Test-Path "build-x64\Release\*.dll") {
+    Copy-Item -Path "build-x64\Release\*.dll" -Destination "bin\"
+}
+if (Test-Path "build-x64\Release\*.exe") {
+    Copy-Item -Path "build-x64\Release\*.exe" -Destination "bin\"
+}
+
+# Copy x86 outputs
+if (Test-Path "build-x86\Release\*.dll") {
+    Copy-Item -Path "build-x86\Release\*.dll" -Destination "bin\"
+}
+if (Test-Path "build-x86\Release\*.exe") {
+    Copy-Item -Path "build-x86\Release\*.exe" -Destination "bin\"
+}
+
 Write-Host ""
 
 # List output files
