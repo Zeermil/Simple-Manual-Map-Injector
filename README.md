@@ -178,6 +178,7 @@ int InjectDllFromMemory(
 
 ## Additional Documentation
 
+- **[PR_SUMMARY.md](PR_SUMMARY.md)** - Summary of cross-architecture implementation
 - **[CROSS_ARCH_GUIDE.md](CROSS_ARCH_GUIDE.md)** - Detailed guide on cross-architecture injection
 - **[CHANGES.md](CHANGES.md)** - Complete changelog of recent updates
 - **[BUILD.md](BUILD.md)** - Comprehensive build instructions
