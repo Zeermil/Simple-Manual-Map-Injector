@@ -21,7 +21,17 @@ echo "Building x64 version..."
 echo "========================================"
 mkdir build-x64
 cd build-x64
-cmake .. -G "Visual Studio 16 2019" -A x64
+
+# Use CMAKE_GENERATOR environment variable if set, otherwise default to VS 2019
+if [ -z "$CMAKE_GENERATOR" ]; then
+    echo "Using default generator: Visual Studio 16 2019"
+    echo "Set CMAKE_GENERATOR environment variable to use a different version"
+    cmake .. -G "Visual Studio 16 2019" -A x64
+else
+    echo "Using generator: $CMAKE_GENERATOR"
+    cmake .. -G "$CMAKE_GENERATOR" -A x64
+fi
+
 if [ $? -ne 0 ]; then
     echo "Failed to configure x64 build"
     cd ..
@@ -41,7 +51,13 @@ echo "Building x86 version..."
 echo "========================================"
 mkdir build-x86
 cd build-x86
-cmake .. -G "Visual Studio 16 2019" -A Win32
+
+if [ -z "$CMAKE_GENERATOR" ]; then
+    cmake .. -G "Visual Studio 16 2019" -A Win32
+else
+    cmake .. -G "$CMAKE_GENERATOR" -A Win32
+fi
+
 if [ $? -ne 0 ]; then
     echo "Failed to configure x86 build"
     cd ..
@@ -83,8 +99,8 @@ echo "========================================"
 echo "Build complete!"
 echo "========================================"
 echo "Output files in build/ directory:"
-if ls build/*.dll build/*.exe 2>/dev/null; then
-    ls -lh build/*.dll build/*.exe
+if [ -f build/Injector-x64.exe ] || [ -f build/ManualMapInjector-x64.dll ]; then
+    ls -lh build/*.dll build/*.exe 2>/dev/null
 else
     echo "Warning: No output files found. Build may have failed."
 fi

@@ -71,7 +71,9 @@ int LaunchHelperInjector(wchar_t* dllPath, wchar_t* processName) {
 	}
 	
 	// Build command line - using dynamic allocation for safety
-	size_t cmdLineLen = wcslen(helperPath) + wcslen(dllPath) + wcslen(processName) + 10; // +10 for quotes and spaces
+	// Format: "helperPath" "dllPath" "processName" = 6 quotes + 2 spaces + 1 null = 9 extra chars
+	const size_t CMD_LINE_OVERHEAD = 9;
+	size_t cmdLineLen = wcslen(helperPath) + wcslen(dllPath) + wcslen(processName) + CMD_LINE_OVERHEAD;
 	wchar_t* cmdLine = new (std::nothrow) wchar_t[cmdLineLen];
 	if (!cmdLine) {
 		printf("Memory allocation failed for command line\n");

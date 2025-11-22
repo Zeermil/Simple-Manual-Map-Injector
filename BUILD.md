@@ -97,6 +97,18 @@ This script will:
 2. Build the x86 version (used as a helper for x64 when targeting 32-bit processes)
 3. Copy all output files to the `build/` directory
 
+**Note:** The script defaults to Visual Studio 16 2019. To use a different version, set the CMAKE_GENERATOR environment variable:
+
+```cmd
+REM For Visual Studio 2022
+set CMAKE_GENERATOR=Visual Studio 17 2022
+build_all.bat
+
+REM For Visual Studio 2017
+set CMAKE_GENERATOR=Visual Studio 15 2017
+build_all.bat
+```
+
 Output files in `build/`:
 - `Injector-x64.exe` - 64-bit injector with cross-architecture support
 - `Injector-x86.exe` - 32-bit helper injector

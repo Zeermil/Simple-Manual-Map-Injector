@@ -19,7 +19,17 @@ echo Building x64 version...
 echo ========================================
 mkdir build-x64
 cd build-x64
-cmake .. -G "Visual Studio 16 2019" -A x64
+
+REM Try to detect Visual Studio version, fall back to 16 2019 if not specified
+if "%CMAKE_GENERATOR%"=="" (
+    echo Using default generator: Visual Studio 16 2019
+    echo Set CMAKE_GENERATOR environment variable to use a different version
+    cmake .. -G "Visual Studio 16 2019" -A x64
+) else (
+    echo Using generator: %CMAKE_GENERATOR%
+    cmake .. -G "%CMAKE_GENERATOR%" -A x64
+)
+
 if errorlevel 1 (
     echo Failed to configure x64 build
     cd ..
@@ -41,7 +51,13 @@ echo Building x86 version...
 echo ========================================
 mkdir build-x86
 cd build-x86
-cmake .. -G "Visual Studio 16 2019" -A Win32
+
+if "%CMAKE_GENERATOR%"=="" (
+    cmake .. -G "Visual Studio 16 2019" -A Win32
+) else (
+    cmake .. -G "%CMAKE_GENERATOR%" -A Win32
+)
+
 if errorlevel 1 (
     echo Failed to configure x86 build
     cd ..
