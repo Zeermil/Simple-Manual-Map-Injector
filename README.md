@@ -176,6 +176,13 @@ int InjectDllFromMemory(
 - `adjustProtections`: Adjust memory protections (recommended: true)
 - `sehExceptionSupport`: Enable SEH exception support for x64 (recommended: true)
 
+## Additional Documentation
+
+- **[CROSS_ARCH_GUIDE.md](CROSS_ARCH_GUIDE.md)** - Detailed guide on cross-architecture injection
+- **[CHANGES.md](CHANGES.md)** - Complete changelog of recent updates
+- **[BUILD.md](BUILD.md)** - Comprehensive build instructions
+- **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide
+
 ## Devs
 
 - Add **DISABLE_OUTPUT** definition if you want to disable injector.cpp output

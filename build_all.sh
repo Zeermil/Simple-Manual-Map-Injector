@@ -1,5 +1,7 @@
 #!/bin/bash
 # Build script for creating both x86 and x64 versions of Manual Map Injector
+# Note: This script requires MinGW cross-compiler or WSL with Visual Studio
+# to build Windows executables on Linux/macOS
 
 echo "========================================"
 echo "Building Manual Map Injector"
@@ -58,20 +60,34 @@ echo "========================================"
 echo "Copying output files..."
 echo "========================================"
 
-# Copy x64 files
-cp build-x64/Release/ManualMapInjector-x64.dll build/
-cp build-x64/Release/Injector-x64.exe build/
+# Copy x64 files (check if they exist first)
+if [ -f build-x64/Release/ManualMapInjector-x64.dll ]; then
+    cp build-x64/Release/ManualMapInjector-x64.dll build/
+    cp build-x64/Release/Injector-x64.exe build/
+else
+    echo "Warning: x64 output files not found in expected location"
+    echo "This script requires MinGW or Visual Studio to build Windows executables"
+fi
 
-# Copy x86 files
-cp build-x86/Release/ManualMapInjector-x86.dll build/
-cp build-x86/Release/Injector-x86.exe build/
+# Copy x86 files (check if they exist first)
+if [ -f build-x86/Release/ManualMapInjector-x86.dll ]; then
+    cp build-x86/Release/ManualMapInjector-x86.dll build/
+    cp build-x86/Release/Injector-x86.exe build/
+else
+    echo "Warning: x86 output files not found in expected location"
+    echo "This script requires MinGW or Visual Studio to build Windows executables"
+fi
 
 echo ""
 echo "========================================"
 echo "Build complete!"
 echo "========================================"
 echo "Output files in build/ directory:"
-ls -lh build/*.dll build/*.exe
+if ls build/*.dll build/*.exe 2>/dev/null; then
+    ls -lh build/*.dll build/*.exe
+else
+    echo "Warning: No output files found. Build may have failed."
+fi
 echo ""
 echo "The x64 injector (Injector-x64.exe) can now inject into both"
 echo "32-bit and 64-bit processes. It will automatically use the"

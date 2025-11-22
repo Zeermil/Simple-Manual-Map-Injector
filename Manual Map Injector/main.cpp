@@ -39,28 +39,50 @@ bool IsCurrentProcess64Bit() {
 int LaunchHelperInjector(wchar_t* dllPath, wchar_t* processName) {
 	// Get the directory of the current executable
 	wchar_t exePath[MAX_PATH];
-	GetModuleFileNameW(NULL, exePath, MAX_PATH);
+	DWORD pathLen = GetModuleFileNameW(NULL, exePath, MAX_PATH);
+	if (pathLen == 0 || pathLen >= MAX_PATH) {
+		printf("Failed to get executable path: 0x%X\n", GetLastError());
+		return -10;
+	}
 	
 	// Remove the executable name to get the directory
 	wchar_t* lastSlash = wcsrchr(exePath, L'\\');
-	if (lastSlash) {
-		*(lastSlash + 1) = L'\0';
+	if (!lastSlash) {
+		// No directory separator found, use current directory
+		wcscpy_s(exePath, MAX_PATH, L".\\");
+		lastSlash = exePath + 1;
 	}
+	*(lastSlash + 1) = L'\0';
 	
 	// Construct path to x86 helper
 	wchar_t helperPath[MAX_PATH];
-	swprintf_s(helperPath, MAX_PATH, L"%sInjector-x86.exe", exePath);
+	if (swprintf_s(helperPath, MAX_PATH, L"%sInjector-x86.exe", exePath) < 0) {
+		printf("Helper path too long\n");
+		return -10;
+	}
 	
 	// Check if helper exists
-	if (GetFileAttributesW(helperPath) == INVALID_FILE_ATTRIBUTES) {
-		printf("x86 helper injector not found: %ls\n", helperPath);
+	DWORD fileAttr = GetFileAttributesW(helperPath);
+	if (fileAttr == INVALID_FILE_ATTRIBUTES) {
+		DWORD err = GetLastError();
+		printf("x86 helper injector not found: %ls (Error: 0x%X)\n", helperPath, err);
 		printf("Please ensure Injector-x86.exe is in the same directory as Injector-x64.exe\n");
 		return -10;
 	}
 	
-	// Build command line
-	wchar_t cmdLine[MAX_PATH * 3];
-	swprintf_s(cmdLine, MAX_PATH * 3, L"\"%ls\" \"%ls\" \"%ls\"", helperPath, dllPath, processName);
+	// Build command line - using dynamic allocation for safety
+	size_t cmdLineLen = wcslen(helperPath) + wcslen(dllPath) + wcslen(processName) + 10; // +10 for quotes and spaces
+	wchar_t* cmdLine = new (std::nothrow) wchar_t[cmdLineLen];
+	if (!cmdLine) {
+		printf("Memory allocation failed for command line\n");
+		return -10;
+	}
+	
+	if (swprintf_s(cmdLine, cmdLineLen, L"\"%ls\" \"%ls\" \"%ls\"", helperPath, dllPath, processName) < 0) {
+		printf("Failed to build command line\n");
+		delete[] cmdLine;
+		return -10;
+	}
 	
 	printf("Launching x86 helper injector for 32-bit target process...\n");
 	
@@ -68,9 +90,13 @@ int LaunchHelperInjector(wchar_t* dllPath, wchar_t* processName) {
 	PROCESS_INFORMATION pi;
 	
 	if (!CreateProcessW(NULL, cmdLine, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
-		printf("Failed to launch helper injector: 0x%X\n", GetLastError());
+		DWORD err = GetLastError();
+		printf("Failed to launch helper injector: 0x%X\n", err);
+		delete[] cmdLine;
 		return -11;
 	}
+	
+	delete[] cmdLine; // No longer needed after process creation
 	
 	// Wait for helper to complete
 	WaitForSingleObject(pi.hProcess, INFINITE);
