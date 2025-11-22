@@ -82,7 +82,9 @@ cmake .. -G "Visual Studio 16 2019" -A Win32
 
 ## Использование с Python
 
-### Пример кода
+### Вариант 1: Python + C++ DLL (Рекомендуется)
+
+Использует скомпилированную C++ DLL через ctypes для полной функциональности:
 
 ```python
 import ctypes
@@ -123,6 +125,16 @@ elif result == -4:
 elif result == -5:
     print("✗ Ошибка: Инжект не удался")
 ```
+
+### Вариант 2: Чистый Python (Образовательный)
+
+Реализация на чистом Python для обучения:
+
+```bash
+python injector.py hello-world-x64.dll notepad.exe
+```
+
+**Примечание:** Версия на чистом Python демонстрирует процесс manual map, но имеет ограничения в генерации shellcode. См. [PYTHON_IMPLEMENTATION.md](PYTHON_IMPLEMENTATION.md) для деталей. Для реального использования применяйте Вариант 1.
 
 ### Готовый пример
 
