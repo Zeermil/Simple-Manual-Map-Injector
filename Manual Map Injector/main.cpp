@@ -7,7 +7,7 @@
 
 using namespace std;
 
-bool IsCorrectTargetArchitecture(HANDLE hProc) {
+static bool IsCorrectTargetArchitecture(HANDLE hProc) {
 	BOOL bTarget = FALSE;
 	if (!IsWow64Process(hProc, &bTarget)) {
 		printf("Can't confirm target process architecture: 0x%X\n", GetLastError());
