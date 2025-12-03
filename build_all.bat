@@ -20,11 +20,11 @@ echo ========================================
 mkdir build-x64
 cd build-x64
 
-REM Try to detect Visual Studio version, fall back to 16 2019 if not specified
+REM Try to detect Visual Studio version, fall back to Visual Studio 18 2026 if not specified
 if "%CMAKE_GENERATOR%"=="" (
-    echo Using default generator: Visual Studio 16 2019
+    echo Using default generator: Visual Studio 18 2026
     echo Set CMAKE_GENERATOR environment variable to use a different version
-    cmake .. -G "Visual Studio 16 2019" -A x64
+    cmake .. -G "Visual Studio 18 2026" -A x64
 ) else (
     echo Using generator: %CMAKE_GENERATOR%
     cmake .. -G "%CMAKE_GENERATOR%" -A x64
@@ -53,7 +53,7 @@ mkdir build-x86
 cd build-x86
 
 if "%CMAKE_GENERATOR%"=="" (
-    cmake .. -G "Visual Studio 16 2019" -A Win32
+    cmake .. -G "Visual Studio 18 2026" -A Win32
 ) else (
     cmake .. -G "%CMAKE_GENERATOR%" -A Win32
 )
