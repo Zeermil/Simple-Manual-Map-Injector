@@ -46,6 +46,48 @@ print(f"Injection result: {result}")  # 0 = success
 
 See `example_python.py` for a complete working example.
 
+### Encrypted Injection (Enhanced Security)
+
+```python
+import ctypes
+
+# Load the injector DLL
+injector = ctypes.CDLL("ManualMapInjector-x64.dll")
+
+# Read ENCRYPTED DLL (not decrypted!)
+with open("encrypted_target.dll", "rb") as f:
+    encrypted_dll_bytes = f.read()
+
+# Encryption key (16 bytes for AES-128)
+encryption_key = b'sixteen byte key'
+
+# Setup function signature
+injector.InjectEncryptedDllFromMemorySimple.argtypes = [
+    ctypes.c_char_p,
+    ctypes.POINTER(ctypes.c_ubyte),
+    ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_ubyte),
+    ctypes.c_size_t
+]
+injector.InjectEncryptedDllFromMemorySimple.restype = ctypes.c_int
+
+# Convert to ctypes
+dll_array = (ctypes.c_ubyte * len(encrypted_dll_bytes)).from_buffer_copy(encrypted_dll_bytes)
+key_array = (ctypes.c_ubyte * len(encryption_key)).from_buffer_copy(encryption_key)
+process_name = b"notepad.exe"
+
+# Inject - the injector will decrypt the DLL at injection time
+result = injector.InjectEncryptedDllFromMemorySimple(process_name, dll_array, len(encrypted_dll_bytes), key_array, len(encryption_key))
+print(f"Injection result: {result}")  # 0 = success, -6 = decryption failed
+```
+
+See `example_encrypted_injection.py` for a complete working example of encrypted injection.
+
+To encrypt a DLL for use with encrypted injection:
+```bash
+python encrypt_dll.py target.dll encrypted_target.dll
+```
+
 ## Building with CMake
 
 ### Prerequisites
@@ -265,6 +307,7 @@ int InjectEncryptedDllFromMemory(
 
 ## Additional Documentation
 
+- **[ENCRYPTION.md](ENCRYPTION.md)** - Complete guide to encrypted DLL injection
 - **[PR_SUMMARY.md](PR_SUMMARY.md)** - Summary of cross-architecture implementation
 - **[CROSS_ARCH_GUIDE.md](CROSS_ARCH_GUIDE.md)** - Detailed guide on cross-architecture injection
 - **[CHANGES.md](CHANGES.md)** - Complete changelog of recent updates
