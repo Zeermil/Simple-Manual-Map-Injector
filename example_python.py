@@ -129,6 +129,62 @@ def inject_dll_from_memory_simple(injector_dll_path, dll_bytes, process_name):
     return result
 
 
+def inject_encrypted_dll_from_memory_simple(injector_dll_path, encrypted_dll_bytes, encryption_key, process_name):
+    """
+    Inject encrypted DLL from memory. The injector will decrypt the DLL at injection time.
+    
+    Args:
+        injector_dll_path: Path to the ManualMapInjector DLL
+        encrypted_dll_bytes: Encrypted bytes of the DLL to inject
+        encryption_key: AES encryption key (16 bytes for AES-128)
+        process_name: Name of the target process (e.g., "notepad.exe")
+    
+    Returns:
+        0 on success, negative error code on failure:
+        -1: Process not found
+        -2: Failed to open process
+        -3: Invalid process architecture
+        -4: Invalid DLL data
+        -5: Injection failed
+        -6: Decryption failed
+    """
+    try:
+        injector = ctypes.CDLL(str(injector_dll_path))
+    except Exception as e:
+        print(f"Error loading injector DLL: {e}")
+        return -100
+    
+    # Define the function signature for the encrypted version
+    injector.InjectEncryptedDllFromMemorySimple.argtypes = [
+        ctypes.c_char_p,  # processName
+        ctypes.POINTER(ctypes.c_ubyte),  # encryptedDllData
+        ctypes.c_size_t,  # encryptedDllSize
+        ctypes.POINTER(ctypes.c_ubyte),  # encryptionKey
+        ctypes.c_size_t   # keySize
+    ]
+    injector.InjectEncryptedDllFromMemorySimple.restype = ctypes.c_int
+    
+    # Convert encrypted DLL bytes to ctypes array
+    dll_array = (ctypes.c_ubyte * len(encrypted_dll_bytes)).from_buffer_copy(encrypted_dll_bytes)
+    
+    # Convert encryption key to ctypes array
+    key_array = (ctypes.c_ubyte * len(encryption_key)).from_buffer_copy(encryption_key)
+    
+    # Convert process name to bytes
+    process_name_bytes = process_name.encode('utf-8')
+    
+    # Call the injection function
+    result = injector.InjectEncryptedDllFromMemorySimple(
+        process_name_bytes,
+        dll_array,
+        len(encrypted_dll_bytes),
+        key_array,
+        len(encryption_key)
+    )
+    
+    return result
+
+
 def main():
     if len(sys.argv) != 3:
         print("Usage: python example_python.py <dll_to_inject> <process_name>")

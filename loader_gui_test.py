@@ -159,6 +159,40 @@ def inject_dll_from_memory_simple(injector_dll_path, dll_bytes, process_name):
     )
     return result
 
+
+def inject_encrypted_dll_from_memory_simple(injector_dll_path, encrypted_dll_bytes, encryption_key, process_name):
+    """
+    Inject encrypted DLL from memory.
+    The injector will decrypt the DLL bytes at injection time.
+    """
+    try:
+        injector = ctypes.CDLL(str(injector_dll_path))
+    except Exception as e:
+        return -100
+
+    injector.InjectEncryptedDllFromMemorySimple.argtypes = [
+        ctypes.c_char_p,
+        ctypes.POINTER(ctypes.c_ubyte),
+        ctypes.c_size_t,
+        ctypes.POINTER(ctypes.c_ubyte),
+        ctypes.c_size_t
+    ]
+    injector.InjectEncryptedDllFromMemorySimple.restype = ctypes.c_int
+
+    dll_array = (ctypes.c_ubyte * len(encrypted_dll_bytes)).from_buffer_copy(encrypted_dll_bytes)
+    key_array = (ctypes.c_ubyte * len(encryption_key)).from_buffer_copy(encryption_key)
+
+    process_name_bytes = process_name.encode('utf-8')
+
+    result = injector.InjectEncryptedDllFromMemorySimple(
+        process_name_bytes,
+        dll_array,
+        len(encrypted_dll_bytes),
+        key_array,
+        len(encryption_key)
+    )
+    return result
+
 def module_loaded(pid, module_name: str):
     try:
         proc = psutil.Process(pid)
@@ -269,17 +303,9 @@ class LoaderClient(QObject):
                 encrypted_b64 = data.get('encrypted_dll')
                 encrypted_data = base64.b64decode(encrypted_b64)
 
-                key = DECRYPTION_KEY
-
-                def unpad(data: bytes) -> bytes:
-                    pad_len = data[-1]
-                    return data[:-pad_len]
-
-                cipher = AES.new(key, AES.MODE_ECB)
-                decrypted_padded = cipher.decrypt(encrypted_data)
-                dll_bytes = unpad(decrypted_padded)
-                # ==============================
-                return dll_bytes
+                # Return encrypted bytes without decrypting
+                # The injector will decrypt them at injection time
+                return encrypted_data
 
             elif response.status_code == 403:
                 self.signals.log.emit("Access denied", "error")
@@ -454,9 +480,11 @@ class LoaderClient(QObject):
         self.signals.log.emit("Performing injection…", "info")
 
         try:
-            result = inject_dll_from_memory_simple(
+            # Use encrypted injection - dll_bytes are already encrypted from download_dll()
+            result = inject_encrypted_dll_from_memory_simple(
                 injector_dll_path,
                 dll_bytes,
+                DECRYPTION_KEY,
                 process_name
             )
 
@@ -466,7 +494,9 @@ class LoaderClient(QObject):
                 watchdog = Process(target=watchdog_delete, args=("cs2.exe", injector_dll_path), daemon=False)
                 watchdog.start()
                 self.signals.close_app.emit()
-
+            elif result == -6:
+                self.signals.log.emit("Injection failed: Decryption error", "error")
+                self.signals.injection_complete.emit(False)
             else:
                 self.signals.log.emit(f"Injection failed. Code: {result}", "error")
                 self.signals.injection_complete.emit(False)
