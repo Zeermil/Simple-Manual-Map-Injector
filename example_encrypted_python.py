@@ -23,8 +23,12 @@ from pathlib import Path
 
 def xor_encrypt(data, key):
     """
-    Simple XOR encryption/decryption.
+    Simple XOR encryption/decryption for obfuscation.
     The same function works for both encryption and decryption.
+    
+    Note: XOR encryption provides minimal security and is primarily 
+    for obfuscation, not robust protection against determined adversaries.
+    For production use, consider stronger encryption like AES.
     
     Args:
         data: bytes to encrypt/decrypt

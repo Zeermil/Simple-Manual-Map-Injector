@@ -208,7 +208,7 @@ DLL_EXPORT int InjectEncryptedDllFromMemory(
     std::unique_ptr<BYTE[]> pDecryptedData(new (std::nothrow) BYTE[dllSize]);
     if (!pDecryptedData) {
         CloseHandle(hProc);
-        return -4; // Memory allocation failed
+        return -5; // Memory allocation failed - use injection failure code
     }
     
     memcpy(pDecryptedData.get(), encryptedDllData, dllSize);

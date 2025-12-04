@@ -53,12 +53,18 @@ namespace AntiDebug {
 
     // Check PEB BeingDebugged flag
     inline bool CheckPEB() {
+        __try {
 #ifdef _WIN64
-        PPEB pPeb = (PPEB)__readgsqword(0x60);
+            PPEB pPeb = (PPEB)__readgsqword(0x60);
 #else
-        PPEB pPeb = (PPEB)__readfsdword(0x30);
+            PPEB pPeb = (PPEB)__readfsdword(0x30);
 #endif
-        return pPeb && pPeb->BeingDebugged;
+            return pPeb && pPeb->BeingDebugged;
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER) {
+            // If accessing PEB fails, assume not being debugged
+            return false;
+        }
     }
 
     // Perform all anti-debug checks
@@ -75,66 +81,95 @@ namespace AntiDump {
 
     // Hide module from PEB
     inline bool HideModuleFromPEB(HMODULE hModule) {
-        typedef struct _LDR_DATA_TABLE_ENTRY {
-            LIST_ENTRY InLoadOrderLinks;
-            LIST_ENTRY InMemoryOrderLinks;
-            LIST_ENTRY InInitializationOrderLinks;
-            PVOID DllBase;
-            PVOID EntryPoint;
-            ULONG SizeOfImage;
-            UNICODE_STRING FullDllName;
-            UNICODE_STRING BaseDllName;
-        } LDR_DATA_TABLE_ENTRY, *PLDR_DATA_TABLE_ENTRY;
+        __try {
+            typedef struct _LDR_DATA_TABLE_ENTRY {
+                LIST_ENTRY InLoadOrderLinks;
+                LIST_ENTRY InMemoryOrderLinks;
+                LIST_ENTRY InInitializationOrderLinks;
+                PVOID DllBase;
+                PVOID EntryPoint;
+                ULONG SizeOfImage;
+                UNICODE_STRING FullDllName;
+                UNICODE_STRING BaseDllName;
+            } LDR_DATA_TABLE_ENTRY, *PLDR_DATA_TABLE_ENTRY;
 
 #ifdef _WIN64
-        PPEB pPeb = (PPEB)__readgsqword(0x60);
+            PPEB pPeb = (PPEB)__readgsqword(0x60);
 #else
-        PPEB pPeb = (PPEB)__readfsdword(0x30);
+            PPEB pPeb = (PPEB)__readfsdword(0x30);
 #endif
 
-        if (!pPeb || !pPeb->Ldr) {
-            return false;
-        }
-
-        PLIST_ENTRY pListHead = &pPeb->Ldr->InMemoryOrderModuleList;
-        PLIST_ENTRY pListEntry = pListHead->Flink;
-
-        while (pListEntry != pListHead) {
-            PLDR_DATA_TABLE_ENTRY pEntry = CONTAINING_RECORD(
-                pListEntry,
-                LDR_DATA_TABLE_ENTRY,
-                InMemoryOrderLinks
-            );
-
-            if (pEntry->DllBase == hModule) {
-                // Unlink from all lists
-                pEntry->InLoadOrderLinks.Flink->Blink = pEntry->InLoadOrderLinks.Blink;
-                pEntry->InLoadOrderLinks.Blink->Flink = pEntry->InLoadOrderLinks.Flink;
-                
-                pEntry->InMemoryOrderLinks.Flink->Blink = pEntry->InMemoryOrderLinks.Blink;
-                pEntry->InMemoryOrderLinks.Blink->Flink = pEntry->InMemoryOrderLinks.Flink;
-                
-                pEntry->InInitializationOrderLinks.Flink->Blink = pEntry->InInitializationOrderLinks.Blink;
-                pEntry->InInitializationOrderLinks.Blink->Flink = pEntry->InInitializationOrderLinks.Flink;
-
-                return true;
+            if (!pPeb || !pPeb->Ldr) {
+                return false;
             }
 
-            pListEntry = pListEntry->Flink;
-        }
+            PLIST_ENTRY pListHead = &pPeb->Ldr->InMemoryOrderModuleList;
+            if (!pListHead) {
+                return false;
+            }
 
-        return false;
+            PLIST_ENTRY pListEntry = pListHead->Flink;
+            if (!pListEntry) {
+                return false;
+            }
+
+            while (pListEntry && pListEntry != pListHead) {
+                PLDR_DATA_TABLE_ENTRY pEntry = CONTAINING_RECORD(
+                    pListEntry,
+                    LDR_DATA_TABLE_ENTRY,
+                    InMemoryOrderLinks
+                );
+
+                if (!pEntry) {
+                    break;
+                }
+
+                if (pEntry->DllBase == hModule) {
+                    // Validate pointers before unlinking
+                    if (!pEntry->InLoadOrderLinks.Flink || !pEntry->InLoadOrderLinks.Blink ||
+                        !pEntry->InMemoryOrderLinks.Flink || !pEntry->InMemoryOrderLinks.Blink ||
+                        !pEntry->InInitializationOrderLinks.Flink || !pEntry->InInitializationOrderLinks.Blink) {
+                        return false;
+                    }
+
+                    // Unlink from all lists
+                    pEntry->InLoadOrderLinks.Flink->Blink = pEntry->InLoadOrderLinks.Blink;
+                    pEntry->InLoadOrderLinks.Blink->Flink = pEntry->InLoadOrderLinks.Flink;
+                    
+                    pEntry->InMemoryOrderLinks.Flink->Blink = pEntry->InMemoryOrderLinks.Blink;
+                    pEntry->InMemoryOrderLinks.Blink->Flink = pEntry->InMemoryOrderLinks.Flink;
+                    
+                    pEntry->InInitializationOrderLinks.Flink->Blink = pEntry->InInitializationOrderLinks.Blink;
+                    pEntry->InInitializationOrderLinks.Blink->Flink = pEntry->InInitializationOrderLinks.Flink;
+
+                    return true;
+                }
+
+                pListEntry = pListEntry->Flink;
+            }
+
+            return false;
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER) {
+            // If any operation fails, return false safely
+            return false;
+        }
     }
 
     // Clear PEB BeingDebugged flag to hide from basic debugger detection
     inline void ClearPEBBeingDebugged() {
+        __try {
 #ifdef _WIN64
-        PPEB pPeb = (PPEB)__readgsqword(0x60);
+            PPEB pPeb = (PPEB)__readgsqword(0x60);
 #else
-        PPEB pPeb = (PPEB)__readfsdword(0x30);
+            PPEB pPeb = (PPEB)__readfsdword(0x30);
 #endif
-        if (pPeb) {
-            pPeb->BeingDebugged = 0;
+            if (pPeb) {
+                pPeb->BeingDebugged = 0;
+            }
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER) {
+            // If clearing fails, silently continue
         }
     }
 }

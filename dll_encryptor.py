@@ -26,8 +26,11 @@ import string
 
 def xor_cipher(data, key):
     """
-    Simple XOR encryption/decryption.
+    Simple XOR encryption/decryption for obfuscation.
     The same function works for both encryption and decryption.
+    
+    Note: XOR encryption provides minimal security and is primarily 
+    for obfuscation, not robust protection against determined adversaries.
     
     Args:
         data: bytes to encrypt/decrypt
@@ -105,6 +108,8 @@ def decrypt_file(input_path, output_path, key):
 def generate_key(length=32):
     """
     Generate a random encryption key.
+    Uses only alphanumeric characters and safe symbols to avoid 
+    command-line parsing or shell escaping issues.
     
     Args:
         length: Length of the key to generate (default: 32)
@@ -112,7 +117,8 @@ def generate_key(length=32):
     Returns:
         Random key string
     """
-    alphabet = string.ascii_letters + string.digits + string.punctuation
+    # Use safe character set to avoid shell escaping issues
+    alphabet = string.ascii_letters + string.digits + '-_'
     key = ''.join(secrets.choice(alphabet) for _ in range(length))
     return key
 
