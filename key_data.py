@@ -1,0 +1,2 @@
+# Auto-generated key file
+KEY = b't\xbc\x90\xdbg{}\x92\x01\xf1\x8ft\xecL]\xf2'
