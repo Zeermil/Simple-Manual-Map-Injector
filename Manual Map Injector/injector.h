@@ -6,8 +6,6 @@
 #include <TlHelp32.h>
 #include <stdio.h>
 #include <string>
-#include "anti_debug.h"
-#include "encryption.h"
 
 using f_LoadLibraryA = HINSTANCE(WINAPI*)(const char* lpLibFilename);
 using f_GetProcAddress = FARPROC(WINAPI*)(HMODULE hModule, LPCSTR lpProcName);
