@@ -4,6 +4,9 @@
 - **Cross-architecture support**: 64-bit injector can inject into both 32-bit and 64-bit processes
 - Supports x86 and x64
 - Supports x64 exceptions (SEH) (only /EHa and /EHc)
+- **Anti-Debug protection**: Detects debuggers and prevents injection when debugging is detected
+- **Anti-Dump protection**: Clears PEB BeingDebugged flag to hide from debuggers
+- **DLL Encryption support**: Inject encrypted DLLs with automatic decryption
 - Release & Debug
 - Removes PE Header and some sections (Configurable)
 - Configurable DllMain params (default DLL_PROCESS_ATTACH)
@@ -45,6 +48,95 @@ print(f"Injection result: {result}")  # 0 = success
 ```
 
 See `example_python.py` for a complete working example.
+
+### Python with Encrypted DLL
+
+```python
+import ctypes
+
+# Encryption function (XOR cipher)
+def xor_encrypt(data, key):
+    key_bytes = key.encode('utf-8')
+    return bytes([data[i] ^ key_bytes[i % len(key_bytes)] for i in range(len(data))])
+
+# Load the injector DLL
+injector = ctypes.CDLL("ManualMapInjector-x64.dll")
+
+# Read and encrypt DLL
+with open("target.dll", "rb") as f:
+    dll_bytes = f.read()
+
+encryption_key = "MySecretKey123"
+encrypted_dll = xor_encrypt(dll_bytes, encryption_key)
+
+# Setup function signature
+injector.InjectEncryptedDllFromMemorySimple.argtypes = [
+    ctypes.c_char_p,
+    ctypes.POINTER(ctypes.c_ubyte),
+    ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_ubyte),
+    ctypes.c_size_t
+]
+injector.InjectEncryptedDllFromMemorySimple.restype = ctypes.c_int
+
+# Convert to ctypes
+dll_array = (ctypes.c_ubyte * len(encrypted_dll)).from_buffer_copy(encrypted_dll)
+key_array = (ctypes.c_ubyte * len(encryption_key)).from_buffer_copy(encryption_key.encode('utf-8'))
+process_name = b"notepad.exe"
+
+# Inject encrypted DLL
+result = injector.InjectEncryptedDllFromMemorySimple(
+    process_name, dll_array, len(encrypted_dll), 
+    key_array, len(encryption_key)
+)
+print(f"Injection result: {result}")  # 0 = success
+```
+
+See `example_encrypted_python.py` for a complete encrypted injection example.
+
+## Encryption Utilities
+
+### DLL Encryptor Script
+
+Use `dll_encryptor.py` to encrypt/decrypt DLL files:
+
+```bash
+# Generate a random encryption key
+python dll_encryptor.py genkey
+
+# Encrypt a DLL
+python dll_encryptor.py encrypt input.dll output.dll.enc MySecretKey123
+
+# Decrypt a DLL
+python dll_encryptor.py decrypt input.dll.enc output.dll MySecretKey123
+```
+
+## Security Features
+
+### Anti-Debug Protection
+
+The injector includes multiple anti-debug checks:
+- `IsDebuggerPresent()` - Basic debugger detection
+- `CheckRemoteDebuggerPresent()` - Remote debugger detection
+- `NtQueryInformationProcess()` - Advanced debugger detection via NT API
+- PEB BeingDebugged flag check
+
+If a debugger is detected, the injection will be aborted to prevent analysis.
+
+### Anti-Dump Protection
+
+The injector implements anti-dump techniques:
+- Clears PEB BeingDebugged flag in the target process
+- Removes PE headers after injection (configurable)
+- Clears non-essential sections (configurable)
+
+### DLL Encryption
+
+DLLs can be encrypted before injection:
+- Uses XOR cipher for encryption/decryption
+- Decryption happens in-memory before injection
+- Encrypted DLLs are harder to detect and analyze
+- Python examples included for encryption workflow
 
 ## Building with CMake
 
@@ -175,6 +267,60 @@ int InjectDllFromMemory(
 - `clearNonNeededSections`: Clear non-essential sections (recommended: true)
 - `adjustProtections`: Adjust memory protections (recommended: true)
 - `sehExceptionSupport`: Enable SEH exception support for x64 (recommended: true)
+
+### InjectEncryptedDllFromMemorySimple (Encrypted Injection)
+
+Simple function for injecting encrypted DLLs with default parameters.
+
+**Signature:**
+```c
+int InjectEncryptedDllFromMemorySimple(
+    const char* processName,
+    const unsigned char* encryptedDllData,
+    size_t dllSize,
+    const unsigned char* encryptionKey,
+    size_t keySize
+)
+```
+
+**Parameters:**
+- `processName`: Name of the target process (e.g., "notepad.exe")
+- `encryptedDllData`: Pointer to encrypted DLL bytes in memory
+- `dllSize`: Size of the encrypted DLL data in bytes
+- `encryptionKey`: Pointer to encryption key bytes
+- `keySize`: Size of the encryption key in bytes
+
+**Return Values:**
+- `0`: Success
+- `-1`: Process not found
+- `-2`: Failed to open process (check privileges)
+- `-3`: Process architecture mismatch (x86 vs x64)
+- `-4`: Invalid DLL data or encryption key
+- `-5`: Injection failed
+- `-6`: Decryption failed
+
+### InjectEncryptedDllFromMemory (Advanced Encrypted Injection)
+
+Advanced function for encrypted injection with configurable parameters.
+
+**Signature:**
+```c
+int InjectEncryptedDllFromMemory(
+    const char* processName,
+    const unsigned char* encryptedDllData,
+    size_t dllSize,
+    const unsigned char* encryptionKey,
+    size_t keySize,
+    bool clearHeader,
+    bool clearNonNeededSections,
+    bool adjustProtections,
+    bool sehExceptionSupport
+)
+```
+
+**Additional Parameters:** Same as `InjectDllFromMemory`
+
+**Note:** The injector uses XOR cipher for encryption/decryption. The same key must be used for encryption (in Python) and decryption (in the injector).
 
 ## Additional Documentation
 
