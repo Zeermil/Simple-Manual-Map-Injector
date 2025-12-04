@@ -135,28 +135,82 @@ def generate_nonce():
     return base64.b64encode(os.urandom(32)).decode()
 
 
+def get_injection_error_message(error_code):
+    """
+    Convert injection error code to human-readable message.
+    
+    Error codes:
+        0: Success
+       -1: Process not found
+       -2: Failed to open process
+       -3: Invalid process architecture
+       -4: Invalid DLL data
+       -5: Injection failed
+     -100: Failed to load injector DLL
+    """
+    error_messages = {
+        0: "Success",
+        -1: "Process not found",
+        -2: "Failed to open process",
+        -3: "Invalid process architecture (32/64-bit mismatch)",
+        -4: "Invalid DLL data",
+        -5: "Injection failed",
+        -100: "Failed to load injector DLL"
+    }
+    return error_messages.get(error_code, f"Unknown error ({error_code})")
+
+
 def inject_dll_from_memory_simple(injector_dll_path, dll_bytes, process_name):
+    """
+    Inject a DLL from memory into a target process using Manual Map technique.
+    
+    This function uses the ManualMapInjector DLL which includes:
+    - Anti-debug protection (automatically detects and blocks debuggers)
+    - Anti-dump protection (clears PEB BeingDebugged flag)
+    - SEH exception support (x64)
+    - PE header clearing
+    - Memory protection adjustment
+    
+    Args:
+        injector_dll_path: Path to the ManualMapInjector-x64.dll
+        dll_bytes: Bytes of the DLL to inject
+        process_name: Name of the target process (e.g., "cs2.exe")
+    
+    Returns:
+        0 on success, negative error code on failure:
+        -1: Process not found
+        -2: Failed to open process
+        -3: Invalid process architecture
+        -4: Invalid DLL data
+        -5: Injection failed
+        -100: Failed to load injector DLL
+    """
     try:
         injector = ctypes.CDLL(str(injector_dll_path))
     except Exception as e:
         return -100
-
+    
+    # Define the function signature for InjectDllFromMemorySimple
     injector.InjectDllFromMemorySimple.argtypes = [
-        ctypes.c_char_p,
-        ctypes.POINTER(ctypes.c_ubyte),
-        ctypes.c_size_t
+        ctypes.c_char_p,                 # processName
+        ctypes.POINTER(ctypes.c_ubyte),  # dllData
+        ctypes.c_size_t                  # dllSize
     ]
     injector.InjectDllFromMemorySimple.restype = ctypes.c_int
-
+    
+    # Convert DLL bytes to ctypes array
     dll_array = (ctypes.c_ubyte * len(dll_bytes)).from_buffer_copy(dll_bytes)
-
+    
+    # Convert process name to bytes
     process_name_bytes = process_name.encode('utf-8')
-
+    
+    # Call the injection function
     result = injector.InjectDllFromMemorySimple(
         process_name_bytes,
         dll_array,
         len(dll_bytes)
     )
+    
     return result
 
 def module_loaded(pid, module_name: str):
@@ -436,7 +490,7 @@ class LoaderClient(QObject):
         temp_dir = tempfile.gettempdir()
         name = secrets.token_hex(16) + ".dll"
         injector_dll_path = os.path.join(temp_dir, name)
-        # injector_dll_path = "injector/ManualMapInjector-x64.dll"
+        # Save ManualMapInjector-x64.dll with random name for security
         try:
             with open(injector_dll_path, "wb") as f:
                 f.write(inj_bytes)
@@ -468,7 +522,8 @@ class LoaderClient(QObject):
                 self.signals.close_app.emit()
 
             else:
-                self.signals.log.emit(f"Injection failed. Code: {result}", "error")
+                error_msg = get_injection_error_message(result)
+                self.signals.log.emit(f"Injection failed: {error_msg}", "error")
                 self.signals.injection_complete.emit(False)
 
         except Exception as e:
