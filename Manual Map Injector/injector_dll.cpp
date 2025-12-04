@@ -147,3 +147,113 @@ DLL_EXPORT int InjectDllFromMemorySimple(
         true   // sehExceptionSupport
     );
 }
+
+// Encrypted DLL injection - decrypts the DLL before injection
+// Returns:
+//   0: Success
+//  -1: Invalid process name
+//  -2: Failed to open process
+//  -3: Invalid process architecture
+//  -4: Invalid DLL data
+//  -5: Injection failed
+//  -6: Decryption failed
+DLL_EXPORT int InjectEncryptedDllFromMemory(
+    const char* processName,
+    const unsigned char* encryptedDllData,
+    size_t dllSize,
+    const unsigned char* encryptionKey,
+    size_t keySize,
+    bool clearHeader,
+    bool clearNonNeededSections,
+    bool adjustProtections,
+    bool sehExceptionSupport
+) {
+    // Validate parameters
+    if (!encryptedDllData || dllSize < MIN_DLL_SIZE || !encryptionKey || keySize == 0) {
+        return -4; // Invalid DLL data or key
+    }
+
+    // Get process ID by name
+    DWORD PID = GetProcessIdByName(processName);
+    if (PID == 0) {
+        return -1; // Process not found
+    }
+
+    // Enable debug privileges
+    TOKEN_PRIVILEGES priv = { 0 };
+    HANDLE hToken = NULL;
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hToken)) {
+        priv.PrivilegeCount = 1;
+        priv.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+        if (LookupPrivilegeValue(NULL, SE_DEBUG_NAME, &priv.Privileges[0].Luid))
+            AdjustTokenPrivileges(hToken, FALSE, &priv, 0, NULL, NULL);
+
+        CloseHandle(hToken);
+    }
+
+    // Open target process
+    HANDLE hProc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, PID);
+    if (!hProc) {
+        return -2; // Failed to open process
+    }
+
+    // Check architecture
+    if (!IsCorrectTargetArchitecture(hProc)) {
+        CloseHandle(hProc);
+        return -3; // Invalid process architecture
+    }
+
+    // Copy and decrypt DLL data
+    std::unique_ptr<BYTE[]> pDecryptedData(new (std::nothrow) BYTE[dllSize]);
+    if (!pDecryptedData) {
+        CloseHandle(hProc);
+        return -5; // Memory allocation failed - use injection failure code
+    }
+    
+    memcpy(pDecryptedData.get(), encryptedDllData, dllSize);
+    
+    // Decrypt the DLL
+    if (!Encryption::DecryptDLL(pDecryptedData.get(), dllSize, encryptionKey, keySize)) {
+        CloseHandle(hProc);
+        return -6; // Decryption failed
+    }
+
+    // Perform injection with decrypted data
+    bool result = ManualMapDll(
+        hProc,
+        pDecryptedData.get(),
+        dllSize,
+        clearHeader,
+        clearNonNeededSections,
+        adjustProtections,
+        sehExceptionSupport,
+        DLL_PROCESS_ATTACH,
+        0
+    );
+
+    CloseHandle(hProc);
+
+    return result ? 0 : -5; // 0 for success, -5 for injection failure
+}
+
+// Simplified encrypted injection with default parameters
+DLL_EXPORT int InjectEncryptedDllFromMemorySimple(
+    const char* processName,
+    const unsigned char* encryptedDllData,
+    size_t dllSize,
+    const unsigned char* encryptionKey,
+    size_t keySize
+) {
+    return InjectEncryptedDllFromMemory(
+        processName,
+        encryptedDllData,
+        dllSize,
+        encryptionKey,
+        keySize,
+        true,  // clearHeader
+        true,  // clearNonNeededSections
+        true,  // adjustProtections
+        true   // sehExceptionSupport
+    );
+}

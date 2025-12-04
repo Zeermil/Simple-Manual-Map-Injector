@@ -7,6 +7,9 @@
 - **Кросс-архитектурная поддержка**: 64-битный инжектор может инжектить как в 32-битные, так и в 64-битные процессы
 - Поддержка x86 и x64 архитектур
 - Поддержка x64 исключений (SEH)
+- **Защита от отладки (Anti-Debug)**: Обнаружение отладчика и предотвращение инжекта при отладке
+- **Защита от дампа (Anti-Dump)**: Очистка флага BeingDebugged в PEB для скрытия от отладчиков
+- **Поддержка шифрования DLL**: Инжект зашифрованных DLL с автоматической расшифровкой
 - Инжект DLL из памяти (байтами)
 - Указание имени процесса для инжекта
 - Вызов через Python с помощью ctypes
@@ -136,6 +139,99 @@ python example_python.py target.dll notepad.exe
 - 64-битный Python → используйте `ManualMapInjector-x64.dll`
 - 32-битный Python → используйте `ManualMapInjector-x86.dll`
 
+### Инжект с шифрованием DLL
+
+```python
+import ctypes
+
+# Функция шифрования (XOR шифр)
+def xor_encrypt(data, key):
+    key_bytes = key.encode('utf-8')
+    return bytes([data[i] ^ key_bytes[i % len(key_bytes)] for i in range(len(data))])
+
+# Загрузить DLL инжектора
+injector = ctypes.CDLL("ManualMapInjector-x64.dll")
+
+# Прочитать и зашифровать DLL
+with open("target.dll", "rb") as f:
+    dll_bytes = f.read()
+
+encryption_key = "МойСекретныйКлюч123"
+encrypted_dll = xor_encrypt(dll_bytes, encryption_key)
+
+# Настроить сигнатуру функции
+injector.InjectEncryptedDllFromMemorySimple.argtypes = [
+    ctypes.c_char_p,                    # имя процесса
+    ctypes.POINTER(ctypes.c_ubyte),     # зашифрованные байты DLL
+    ctypes.c_size_t,                    # размер DLL
+    ctypes.POINTER(ctypes.c_ubyte),     # ключ шифрования
+    ctypes.c_size_t                     # размер ключа
+]
+injector.InjectEncryptedDllFromMemorySimple.restype = ctypes.c_int
+
+# Конвертировать в ctypes
+dll_array = (ctypes.c_ubyte * len(encrypted_dll)).from_buffer_copy(encrypted_dll)
+key_array = (ctypes.c_ubyte * len(encryption_key)).from_buffer_copy(encryption_key.encode('utf-8'))
+process_name = b"notepad.exe"
+
+# Выполнить инжект зашифрованной DLL
+result = injector.InjectEncryptedDllFromMemorySimple(
+    process_name, dll_array, len(encrypted_dll), 
+    key_array, len(encryption_key)
+)
+print(f"Результат: {result}")  # 0 = успех
+```
+
+Используйте готовый скрипт `example_encrypted_python.py`:
+
+```bash
+python example_encrypted_python.py target.dll notepad.exe МойКлюч123
+```
+
+## Утилиты шифрования
+
+### Скрипт шифрования DLL
+
+Используйте `dll_encryptor.py` для шифрования/дешифрования DLL файлов:
+
+```bash
+# Сгенерировать случайный ключ шифрования
+python dll_encryptor.py genkey
+
+# Зашифровать DLL
+python dll_encryptor.py encrypt input.dll output.dll.enc МойКлюч123
+
+# Расшифровать DLL
+python dll_encryptor.py decrypt input.dll.enc output.dll МойКлюч123
+```
+
+## Функции безопасности
+
+### Защита от отладки (Anti-Debug)
+
+Инжектор включает несколько проверок на наличие отладчика:
+- `IsDebuggerPresent()` - базовое обнаружение отладчика
+- `CheckRemoteDebuggerPresent()` - обнаружение удалённого отладчика
+- `NtQueryInformationProcess()` - продвинутое обнаружение через NT API
+- Проверка флага BeingDebugged в PEB
+
+Если обнаружен отладчик, инжект будет прерван для предотвращения анализа.
+
+### Защита от дампа (Anti-Dump)
+
+Инжектор реализует техники защиты от дампа:
+- Очистка флага BeingDebugged в PEB в целевом процессе
+- Удаление PE заголовков после инжекта (настраивается)
+- Очистка несущественных секций (настраивается)
+
+### Шифрование DLL
+
+DLL могут быть зашифрованы перед инжектом:
+- Использует XOR шифр для шифрования/дешифрования
+- Расшифровка происходит в памяти перед инжектом
+- Зашифрованные DLL сложнее обнаружить и анализировать
+- Включены примеры на Python для процесса шифрования
+
 ## API
 
 ### InjectDllFromMemorySimple (Рекомендуется)
@@ -165,11 +261,42 @@ python example_python.py target.dll notepad.exe
 - `adjustProtections` (bool) - настроить защиту памяти
 - `sehExceptionSupport` (bool) - поддержка SEH исключений для x64
 
+### InjectEncryptedDllFromMemorySimple (Инжект с шифрованием)
+
+Простая функция для инжекта зашифрованных DLL с параметрами по умолчанию.
+
+**Параметры:**
+- `processName` (строка) - имя процесса, например "notepad.exe"
+- `encryptedDllData` (байты) - зашифрованные байты DLL в памяти
+- `dllSize` (число) - размер зашифрованных данных DLL
+- `encryptionKey` (байты) - ключ шифрования в байтах
+- `keySize` (число) - размер ключа шифрования
+
+**Возвращаемые значения:**
+- `0` - успех
+- `-1` - процесс не найден
+- `-2` - не удалось открыть процесс (проверьте права)
+- `-3` - несовпадение архитектуры (x86 vs x64)
+- `-4` - неверные данные DLL или ключ шифрования
+- `-5` - инжект не удался
+- `-6` - расшифровка не удалась
+
+### InjectEncryptedDllFromMemory (Расширенный инжект с шифрованием)
+
+Расширенная функция для инжекта зашифрованных DLL с настраиваемыми параметрами.
+
+**Дополнительные параметры:** Такие же как в `InjectDllFromMemory`
+
+**Примечание:** Инжектор использует XOR шифр для шифрования/дешифрования. Один и тот же ключ должен использоваться для шифрования (в Python) и дешифрования (в инжекторе).
+
 ## Преимущества
 
 ✅ **Инжект из памяти** - не нужно сохранять DLL на диск  
 ✅ **Простой API** - легко использовать из Python  
 ✅ **Безопасность** - автоматическая очистка памяти  
+✅ **Защита от отладки** - обнаружение и предотвращение отладки  
+✅ **Защита от дампа** - скрытие от отладчиков в целевом процессе  
+✅ **Шифрование DLL** - инжект зашифрованных DLL с расшифровкой в памяти  
 ✅ **Гибкость** - настраиваемые параметры инжекта  
 ✅ **Кроссплатформенность** - работает с x86 и x64  
 

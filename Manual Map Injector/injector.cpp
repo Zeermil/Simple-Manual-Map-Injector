@@ -13,6 +13,12 @@
 #endif
 
 bool ManualMapDll(HANDLE hProc, BYTE* pSrcData, SIZE_T FileSize, bool ClearHeader, bool ClearNonNeededSections, bool AdjustProtections, bool SEHExceptionSupport, DWORD fdwReason, LPVOID lpReserved) {
+	// Anti-Debug checks
+	if (AntiDebug::IsDebuggerDetected()) {
+		ILog("Debugger detected! Aborting injection.\n");
+		return false;
+	}
+
 	IMAGE_NT_HEADERS* pOldNtHeader = nullptr;
 	IMAGE_OPTIONAL_HEADER* pOldOptHeader = nullptr;
 	IMAGE_FILE_HEADER* pOldFileHeader = nullptr;
@@ -244,6 +250,9 @@ void __stdcall Shellcode(MANUAL_MAPPING_DATA* pData) {
 		pData->hMod = (HINSTANCE)0x404040;
 		return;
 	}
+
+	// Anti-Dump: Clear PEB BeingDebugged flag
+	AntiDump::ClearPEBBeingDebugged();
 
 	BYTE* pBase = pData->pbase;
 	auto* pOpt = &reinterpret_cast<IMAGE_NT_HEADERS*>(pBase + reinterpret_cast<IMAGE_DOS_HEADER*>((uintptr_t)pBase)->e_lfanew)->OptionalHeader;
