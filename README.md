@@ -176,6 +176,93 @@ int InjectDllFromMemory(
 - `adjustProtections`: Adjust memory protections (recommended: true)
 - `sehExceptionSupport`: Enable SEH exception support for x64 (recommended: true)
 
+### InjectEncryptedDllFromMemorySimple (New - Encrypted Injection)
+
+Function for injecting encrypted DLL from memory. The DLL is decrypted at injection time for enhanced security.
+
+**Signature:**
+```c
+int InjectEncryptedDllFromMemorySimple(
+    const char* processName,
+    const unsigned char* encryptedDllData,
+    size_t encryptedDllSize,
+    const unsigned char* encryptionKey,
+    size_t keySize
+)
+```
+
+**Parameters:**
+- `processName`: Name of the target process (e.g., "notepad.exe")
+- `encryptedDllData`: Pointer to encrypted DLL bytes in memory
+- `encryptedDllSize`: Size of the encrypted DLL data in bytes
+- `encryptionKey`: AES encryption key (16 bytes for AES-128)
+- `keySize`: Size of the encryption key in bytes (must be 16)
+
+**Return Values:**
+- `0`: Success
+- `-1`: Process not found
+- `-2`: Failed to open process (check privileges)
+- `-3`: Process architecture mismatch (x86 vs x64)
+- `-4`: Invalid DLL data
+- `-5`: Injection failed
+- `-6`: Decryption failed
+
+**Python Example:**
+```python
+import ctypes
+
+# Load the injector DLL
+injector = ctypes.CDLL("ManualMapInjector-x64.dll")
+
+# Read encrypted DLL
+with open("encrypted_target.dll", "rb") as f:
+    encrypted_dll_bytes = f.read()
+
+# Define AES key (16 bytes for AES-128)
+encryption_key = b'sixteen byte key'
+
+# Setup function signature
+injector.InjectEncryptedDllFromMemorySimple.argtypes = [
+    ctypes.c_char_p,
+    ctypes.POINTER(ctypes.c_ubyte),
+    ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_ubyte),
+    ctypes.c_size_t
+]
+injector.InjectEncryptedDllFromMemorySimple.restype = ctypes.c_int
+
+# Convert to ctypes
+dll_array = (ctypes.c_ubyte * len(encrypted_dll_bytes)).from_buffer_copy(encrypted_dll_bytes)
+key_array = (ctypes.c_ubyte * len(encryption_key)).from_buffer_copy(encryption_key)
+process_name = b"notepad.exe"
+
+# Inject
+result = injector.InjectEncryptedDllFromMemorySimple(
+    process_name, dll_array, len(encrypted_dll_bytes),
+    key_array, len(encryption_key)
+)
+print(f"Injection result: {result}")  # 0 = success
+```
+
+### InjectEncryptedDllFromMemory (Advanced - Encrypted Injection)
+
+Advanced function for encrypted DLL injection with configurable parameters.
+
+**Signature:**
+```c
+int InjectEncryptedDllFromMemory(
+    const char* processName,
+    const unsigned char* encryptedDllData,
+    size_t encryptedDllSize,
+    const unsigned char* encryptionKey,
+    size_t keySize,
+    bool clearHeader,
+    bool clearNonNeededSections,
+    bool adjustProtections,
+    bool sehExceptionSupport
+)
+```
+
 ## Additional Documentation
 
 - **[PR_SUMMARY.md](PR_SUMMARY.md)** - Summary of cross-architecture implementation
