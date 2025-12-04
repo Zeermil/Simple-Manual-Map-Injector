@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Windows.h>
-#include <memory>
 
 // Simple AES ECB decryption for DLL bytes
 // Uses Windows CNG (Cryptography API: Next Generation)

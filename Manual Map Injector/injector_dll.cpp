@@ -202,17 +202,19 @@ DLL_EXPORT int InjectEncryptedDllFromMemory(
     }
 
     // Decrypt the DLL data
-    BYTE* decryptedData = nullptr;
+    BYTE* decryptedDataRaw = nullptr;
     SIZE_T decryptedSize = 0;
     
-    if (!AES_ECB_Decrypt(encryptedDllData, encryptedDllSize, encryptionKey, keySize, &decryptedData, &decryptedSize)) {
+    if (!AES_ECB_Decrypt(encryptedDllData, encryptedDllSize, encryptionKey, keySize, &decryptedDataRaw, &decryptedSize)) {
         CloseHandle(hProc);
         return -6; // Decryption failed
     }
 
+    // Use smart pointer for automatic cleanup
+    std::unique_ptr<BYTE[]> decryptedData(decryptedDataRaw);
+
     // Validate decrypted DLL data
     if (decryptedSize < MIN_DLL_SIZE) {
-        delete[] decryptedData;
         CloseHandle(hProc);
         return -4; // Invalid DLL data
     }
@@ -220,7 +222,7 @@ DLL_EXPORT int InjectEncryptedDllFromMemory(
     // Perform injection
     bool result = ManualMapDll(
         hProc,
-        decryptedData,
+        decryptedData.get(),
         decryptedSize,
         clearHeader,
         clearNonNeededSections,
@@ -230,8 +232,7 @@ DLL_EXPORT int InjectEncryptedDllFromMemory(
         0
     );
 
-    // Clean up decrypted data
-    delete[] decryptedData;
+    // decryptedData is automatically cleaned up by unique_ptr
     CloseHandle(hProc);
 
     return result ? 0 : -5; // 0 for success, -5 for injection failure
