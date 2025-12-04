@@ -165,6 +165,67 @@ python example_python.py target.dll notepad.exe
 - `adjustProtections` (bool) - настроить защиту памяти
 - `sehExceptionSupport` (bool) - поддержка SEH исключений для x64
 
+### InjectEncryptedDllFromMemorySimple (Новое - Инжект зашифрованной DLL)
+
+Функция для инжекта зашифрованной DLL из памяти. DLL расшифровывается непосредственно в момент инжекта для повышенной безопасности.
+
+**Параметры:**
+- `processName` (строка) - имя процесса, например "notepad.exe"
+- `encryptedDllData` (байты) - зашифрованные байты DLL в памяти
+- `encryptedDllSize` (число) - размер зашифрованных данных DLL
+- `encryptionKey` (байты) - ключ шифрования AES (16 байт для AES-128)
+- `keySize` (число) - размер ключа шифрования в байтах (должен быть 16)
+
+**Возвращаемые значения:**
+- `0` - успех
+- `-1` - процесс не найден
+- `-2` - не удалось открыть процесс (проверьте права)
+- `-3` - несовпадение архитектуры (x86 vs x64)
+- `-4` - неверные данные DLL
+- `-5` - инжект не удался
+- `-6` - ошибка расшифровки
+
+**Пример использования (Python):**
+```python
+import ctypes
+
+# Загрузить DLL инжектора
+injector = ctypes.CDLL("ManualMapInjector-x64.dll")
+
+# Прочитать зашифрованную DLL
+with open("encrypted_target.dll", "rb") as f:
+    encrypted_dll_bytes = f.read()
+
+# Определить ключ AES (16 байт для AES-128)
+encryption_key = b'sixteen byte key'
+
+# Настроить сигнатуру функции
+injector.InjectEncryptedDllFromMemorySimple.argtypes = [
+    ctypes.c_char_p,
+    ctypes.POINTER(ctypes.c_ubyte),
+    ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_ubyte),
+    ctypes.c_size_t
+]
+injector.InjectEncryptedDllFromMemorySimple.restype = ctypes.c_int
+
+# Конвертировать в ctypes
+dll_array = (ctypes.c_ubyte * len(encrypted_dll_bytes)).from_buffer_copy(encrypted_dll_bytes)
+key_array = (ctypes.c_ubyte * len(encryption_key)).from_buffer_copy(encryption_key)
+process_name = b"notepad.exe"
+
+# Выполнить инжект
+result = injector.InjectEncryptedDllFromMemorySimple(
+    process_name, dll_array, len(encrypted_dll_bytes),
+    key_array, len(encryption_key)
+)
+print(f"Результат инжекта: {result}")  # 0 = успех
+```
+
+### InjectEncryptedDllFromMemory (Расширенная версия - Инжект зашифрованной DLL)
+
+Расширенная функция для инжекта зашифрованной DLL с настраиваемыми параметрами.
+
 ## Преимущества
 
 ✅ **Инжект из памяти** - не нужно сохранять DLL на диск  

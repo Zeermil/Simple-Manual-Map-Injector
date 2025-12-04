@@ -9,10 +9,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(SOURCE_FILES
     "Manual Map Injector/injector.cpp"
     "Manual Map Injector/injector_dll.cpp"
+    "Manual Map Injector/crypto.cpp"
 )
 
 set(HEADER_FILES
     "Manual Map Injector/injector.h"
+    "Manual Map Injector/crypto.h"
 )
 
 # Create shared library (DLL)
