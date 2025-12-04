@@ -1,6 +1,7 @@
 #include "crypto.h"
 #include <bcrypt.h>
 #include <stdio.h>
+#include <new>
 
 #pragma comment(lib, "bcrypt.lib")
 
