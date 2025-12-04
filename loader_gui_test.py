@@ -140,13 +140,13 @@ def get_injection_error_message(error_code):
     Convert injection error code to human-readable message.
     
     Error codes:
-        0: Success
-       -1: Process not found
-       -2: Failed to open process
-       -3: Invalid process architecture
-       -4: Invalid DLL data
-       -5: Injection failed
-     -100: Failed to load injector DLL
+          0: Success
+         -1: Process not found
+         -2: Failed to open process
+         -3: Invalid process architecture
+         -4: Invalid DLL data
+         -5: Injection failed
+       -100: Failed to load injector DLL
     """
     error_messages = {
         0: "Success",
@@ -166,9 +166,9 @@ def inject_dll_from_memory_simple(injector_dll_path, dll_bytes, process_name):
     
     This function uses the ManualMapInjector DLL which includes:
     - Anti-debug protection (automatically detects and blocks debuggers)
-    - Anti-dump protection (clears PEB BeingDebugged flag)
+    - Anti-dump protection (clears PE headers and PEB BeingDebugged flag)
     - SEH exception support (x64)
-    - PE header clearing
+    - Non-essential sections clearing
     - Memory protection adjustment
     
     Args:
