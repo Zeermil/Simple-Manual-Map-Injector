@@ -93,6 +93,8 @@ def aes_encrypt(raw_dict: dict) -> str:
     json_data = json.dumps(raw_dict).encode("utf-8")
     padded = pad(json_data)
 
+    # ECB mode is used for compatibility with the server implementation
+    # In production, consider using CBC or GCM mode for enhanced security
     cipher = AES.new(DECRYPTION_KEY, AES.MODE_ECB)
     encrypted = cipher.encrypt(padded)
 

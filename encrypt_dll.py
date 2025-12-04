@@ -48,6 +48,10 @@ def encrypt_dll(dll_path: str, output_path: str, key: bytes):
     print(f"Padded size: {len(padded_data)} bytes")
     
     # Encrypt using AES-128 ECB
+    # Note: ECB mode is used for compatibility with the C++ injector implementation.
+    # For production use, consider using CBC or GCM mode for enhanced security.
+    # ECB is acceptable here as the DLL content has high entropy and is not
+    # sensitive to pattern analysis in this specific use case.
     cipher = AES.new(key, AES.MODE_ECB)
     encrypted_data = cipher.encrypt(padded_data)
     
